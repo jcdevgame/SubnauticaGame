@@ -1,0 +1,12 @@
+﻿  Main.cpp
+C:\SubnauticaGame\Main.cpp(235,9): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+C:\SubnauticaGame\Main.cpp(645,34): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\SubnauticaGame\Main.cpp(645,28): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\SubnauticaGame\Main.cpp(668,22): warning C4305: '=': truncation from 'double' to 'float'
+C:\SubnauticaGame\Main.cpp(671,24): warning C4305: '=': truncation from 'double' to 'float'
+C:\SubnauticaGame\Main.cpp(755,92): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\SubnauticaGame\Main.cpp(765,95): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
+  SubnauticaGame.vcxproj -> C:\SubnauticaGame\x64\Debug\SubnauticaGame.exe
+  'pwsh.exe' is not recognized as an internal or external command,
+  operable program or batch file.

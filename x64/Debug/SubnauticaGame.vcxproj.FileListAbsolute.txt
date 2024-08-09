@@ -1,0 +1,7 @@
+C:\SubnauticaGame\x64\Debug\SubnauticaGame.vcxproj.CopyComplete
+C:\SubnauticaGame\x64\Debug\SubnauticaGame.exe
+C:\SubnauticaGame\x64\Debug\assimp-vc143-mtd.dll
+C:\SubnauticaGame\x64\Debug\poly2tri.dll
+C:\SubnauticaGame\x64\Debug\minizip.dll
+C:\SubnauticaGame\x64\Debug\zlibd1.dll
+C:\SubnauticaGame\x64\Debug\pugixml.dll
