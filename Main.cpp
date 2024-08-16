@@ -1,25 +1,4 @@
-// Third Party Libraries
-#include <glad/glad.h>
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/vec3.hpp>
-#include <glm/mat4x4.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-
-// STL libs
-#include <iostream>
-#include <string>
-#include <fstream>
-#include <vector>
-#include <numeric>
-#include <unordered_map>
-#include <optional>
+#include "Pipeline.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -27,14 +6,6 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
-
-#include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
-
-// Libraries
-#include "Camera.hpp"
-#include "ExVertexes.h"
 
 struct Vertex {
     GLfloat x, y, z; // Position
@@ -47,10 +18,6 @@ struct Vertex {
         GLfloat u = 0.0f, GLfloat v = 0.0f,
         GLfloat nx = 0.0f, GLfloat ny = 0.0f, GLfloat nz = 0.0f)
         : x(x), y(y), z(z), r(r), g(g), b(b), u(u), v(v), nx(nx), ny(ny), nz(nz) {}
-};
-
-struct Triangle {
-    Vertex v0, v1, v2;
 };
 
 std::vector<Vertex> loadOBJWithAssimp(const std::string& filename, std::vector<GLuint>& indices) {
@@ -105,78 +72,9 @@ std::vector<Vertex> loadOBJWithAssimp(const std::string& filename, std::vector<G
     return vertices;
 }
 
-std::vector<Triangle> loadTrianglesWithAssimp(const std::string& filename) {
-    Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
-
-    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-        std::cerr << "ERROR::ASSIMP::" << importer.GetErrorString() << std::endl;
-        return {};
-    }
-
-    std::vector<Triangle> triangles;
-
-    for (unsigned int i = 0; i < scene->mNumMeshes; i++) {
-        aiMesh* mesh = scene->mMeshes[i];
-        std::vector<Vertex> vertices(mesh->mNumVertices);
-
-        for (unsigned int j = 0; j < mesh->mNumVertices; j++) {
-            vertices[j].x = mesh->mVertices[j].x;
-            vertices[j].y = mesh->mVertices[j].y;
-            vertices[j].z = mesh->mVertices[j].z;
-
-            if (mesh->HasNormals()) {
-                vertices[j].nx = mesh->mNormals[j].x;
-                vertices[j].ny = mesh->mNormals[j].y;
-                vertices[j].nz = mesh->mNormals[j].z;
-            }
-
-            if (mesh->mTextureCoords[0]) {
-                vertices[j].u = mesh->mTextureCoords[0][j].x;
-                vertices[j].v = mesh->mTextureCoords[0][j].y;
-            }
-            else {
-                vertices[j].u = 0.0f;
-                vertices[j].v = 0.0f;
-            }
-
-            vertices[j].r = 1.0f; // Default color
-            vertices[j].g = 1.0f;
-            vertices[j].b = 1.0f;
-        }
-
-        for (unsigned int j = 0; j < mesh->mNumFaces; j++) {
-            aiFace face = mesh->mFaces[j];
-            if (face.mNumIndices == 3) { // Ensure the face is a triangle
-                Triangle triangle;
-                triangle.v0 = vertices[face.mIndices[0]];
-                triangle.v1 = vertices[face.mIndices[1]];
-                triangle.v2 = vertices[face.mIndices[2]];
-                triangles.push_back(triangle);
-            }
-        }
-    }
-
-    return triangles;
-}
-
-struct Application {
-    int             mScreenWidth = 1920;
-    int             mScreenHeight = 1080;
-    GLFWwindow* mGraphicsApplicationWindow = nullptr;
-    GLuint          mGraphicsPipelineShaderProgram = 0;
-    bool quitApplication = false;
-    Camera mCamera;
-};
-
-struct Lighting {
-    glm::vec3 mLightPos = glm::vec3(6.0f, 20.0f, 0.0f);
-    glm::vec3 mLightDir = glm::vec3(0.0f, -1.0f, 0.0f);
-    float mLightCol2[3] = { 1.0f, 1.0f, 1.0f };
-    glm::vec3 mLightCol = glm::vec3(1.0f, 1.0f, 1.0f);
-};
-
 struct baseObject {
+    bool visible = true;
+
     GLuint mVertexArrayObject = 0;
     GLuint mVertexBufferObject = 0;
     GLuint mIndexBufferObject = 0;
@@ -184,15 +82,18 @@ struct baseObject {
 
     float m_xPos = 0.0f;
     float m_yPos = 0.0f;
-    float m_zPos = g_uOffset;
+    float m_zPos = m_uOffset;
 
-    float g_uOffset = -2.0f;
-    float g_uRotate = 0.0f;
-    float g_uScale = 0.5f;
+    float m_uOffset = -2.0f;
+    float m_uRotate = 0.0f;
+    float m_uScale = 0.5f;
+
+    float m_uScaleX = 1.0f;
+    float m_uScaleY = 1.0f;
+    float m_uScaleZ = 1.0f;;
 
     std::vector<GLfloat> m_vertexData;
     std::vector<GLuint> m_indexBufferData;
-    std::vector<Triangle> m_triangles;
 
     unsigned int textureID;
     GLuint64 textureHandle;
@@ -209,6 +110,12 @@ struct baseObject {
         m_zPos = z;
     }
 
+    void scaleObject(float sx, float sy, float sz) {
+        m_uScaleX = sx;
+        m_uScaleY = sy;
+        m_uScaleZ = sz;
+    }
+
     void loadFromOBJ(const std::string& filename) {
         std::vector<GLuint> indices;
         std::vector<Vertex> vertices = loadOBJWithAssimp(filename, indices);
@@ -220,45 +127,285 @@ struct baseObject {
 
         m_indexBufferData = indices;
     }
+};
 
-    void loadTrianglesFromOBJ(const std::string& filename) {
-        m_triangles = loadTrianglesWithAssimp(filename);
+struct baseHitbox : baseObject {
+    bool visible = true;
+    bool negative = false;
+
+    glm::vec3 min;
+    glm::vec3 max;
+    glm::vec3 mPreviousPos;
+    Camera* mCamera; // Add a reference to the camera
+
+    void updateBounds(float offset = 0.05f) {
+        if (m_vertexData.empty()) return;
+
+        min = glm::vec3(std::numeric_limits<float>::max());
+        max = glm::vec3(std::numeric_limits<float>::lowest());
+
+        for (size_t i = 0; i < m_vertexData.size(); i += 11) { // Assuming each vertex has 11 attributes
+            glm::vec3 vertex(m_vertexData[i], m_vertexData[i + 1], m_vertexData[i + 2]);
+
+            // Apply scaling
+            vertex.x *= m_uScaleX;
+            vertex.y *= m_uScaleY;
+            vertex.z *= m_uScaleZ;
+
+            // Update min and max coordinates
+            if (vertex.x < min.x) min.x = vertex.x;
+            if (vertex.y < min.y) min.y = vertex.y;
+            if (vertex.z < min.z) min.z = vertex.z;
+
+            if (vertex.x > max.x) max.x = vertex.x;
+            if (vertex.y > max.y) max.y = vertex.y;
+            if (vertex.z > max.z) max.z = vertex.z;
+        }
+
+        // Apply translation to min and max coordinates
+        min += glm::vec3(m_xPos, m_yPos, m_zPos);
+        max += glm::vec3(m_xPos, m_yPos, m_zPos);
+
+        // Apply offset to min and max coordinates
+        min -= glm::vec3(offset);
+        max += glm::vec3(offset);
+    }
+
+    void moveHitbox(float x, float y, float z) {
+        min.x += x;
+        max.x += x;
+        m_xPos += x;
+
+        min.y += y;
+        max.y += y;
+        m_yPos += y;
+
+        min.z += z;
+        max.z += z;
+        m_zPos += z;
+
+        // Update camera position
+        if (mCamera) {
+            mCamera->mEye.x += x;
+            mCamera->mEye.y += y;
+            mCamera->mEye.z += z;
+        }
+    }
+
+    void setHitboxPosition(float x, float y, float z) {
+        min.x += (x - min.x);
+        min.y += (y - min.y);
+        min.z += (z - min.z);
+
+        max.x += (x - max.x);
+        max.y += (y - max.y);
+        max.z += (z - max.z);
+
+        m_xPos = x;
+        m_yPos = y;
+        m_zPos = z;
+
+        // Update camera position
+        if (mCamera) {
+            mCamera->mEye.x = x;
+            mCamera->mEye.y = y;
+            mCamera->mEye.z = z;
+        }
+    }
+
+    bool isPointInside(const glm::vec3& point) const {
+        return point.x >= min.x && point.x <= max.x &&
+            point.y >= min.y && point.y <= max.y &&
+            point.z >= min.z && point.z <= max.z;
+    }
+
+    glm::vec3 CalculatePenetrationDepth(const baseHitbox& box1, const baseHitbox& box2) {
+        glm::vec3 penetrationDepth(0.0f);
+
+        if (box1.max.x > box2.min.x && box1.min.x < box2.max.x) {
+            penetrationDepth.x = std::min(box1.max.x - box2.min.x, box2.max.x - box1.min.x);
+        }
+        if (box1.max.y > box2.min.y && box1.min.y < box2.max.y) {
+            penetrationDepth.y = std::min(box1.max.y - box2.min.y, box2.max.y - box1.min.y);
+        }
+        if (box1.max.z > box2.min.z && box1.min.z < box2.max.z) {
+            penetrationDepth.z = std::min(box1.max.z - box2.min.z, box2.max.z - box1.min.z);
+        }
+
+        return penetrationDepth;
+    }
+
+    bool isPointInsidePositiveOnly(const glm::vec3& point, const baseHitbox& positiveHitbox, const std::vector<baseHitbox*>& negativeHitboxes) {
+        if (!positiveHitbox.isPointInside(point)) {
+            return false;
+        }
+
+        for (const auto& negBox : negativeHitboxes) {
+            if (negBox->negative && negBox->isPointInside(point)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool CheckCollision(const baseHitbox& box1, const baseHitbox& box2, const std::vector<baseHitbox*>& negativeHitboxes) {
+        bool xOverlap = box1.max.x >= box2.min.x && box1.min.x <= box2.max.x;
+        bool yOverlap = box1.max.y >= box2.min.y && box1.min.y <= box2.max.y;
+        bool zOverlap = box1.max.z >= box2.min.z && box1.min.z <= box2.max.z;
+
+        if (!(xOverlap && yOverlap && zOverlap)) {
+            return false;
+        }
+
+        // Calculate the overlap region
+        glm::vec3 overlapMin = glm::max(box1.min, box2.min);
+        glm::vec3 overlapMax = glm::min(box1.max, box2.max);
+
+        // Check if any point within the overlap region is inside the positive hitbox but outside the negative hitbox
+        for (float x = overlapMin.x; x <= overlapMax.x; x += 0.01f) {
+            for (float y = overlapMin.y; y <= overlapMax.y; y += 0.01f) {
+                for (float z = overlapMin.z; z <= overlapMax.z; z += 0.01f) {
+                    glm::vec3 point(x, y, z);
+                    if (isPointInsidePositiveOnly(point, box1, negativeHitboxes) || isPointInsidePositiveOnly(point, box2, negativeHitboxes)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    void ResolveCollision(baseHitbox& box1, const baseHitbox& box2, const std::vector<baseHitbox*>& negativeHitboxes) {
+        // Check if collision should be ignored due to negative hitbox
+        if (!CheckCollision(box1, box2, negativeHitboxes)) {
+            std::cout << "Collision ignored due to negative hitbox." << std::endl;
+            return;
+        }
+
+        glm::vec3 penetrationDepth = CalculatePenetrationDepth(box1, box2);
+
+        // Move only box1 based on the smallest penetration depth
+        if (penetrationDepth.x < penetrationDepth.y && penetrationDepth.x < penetrationDepth.z) {
+            if (box1.m_xPos < box2.m_xPos) {
+                box1.moveHitbox(-penetrationDepth.x, 0, 0);
+            }
+            else {
+                box1.moveHitbox(penetrationDepth.x, 0, 0);
+            }
+        }
+        else if (penetrationDepth.y < penetrationDepth.x && penetrationDepth.y < penetrationDepth.z) {
+            if (box1.m_yPos < box2.m_yPos) {
+                box1.moveHitbox(0, -penetrationDepth.y, 0);
+            }
+            else {
+                box1.moveHitbox(0, penetrationDepth.y, 0);
+            }
+        }
+        else {
+            if (box1.m_zPos < box2.m_zPos) {
+                box1.moveHitbox(0, 0, -penetrationDepth.z);
+            }
+            else {
+                box1.moveHitbox(0, 0, penetrationDepth.z);
+            }
+        }
     }
 };
 
-struct baseModel : baseObject{
-    std::vector<baseObject>modelObjects;
+void UpdateCameraHitbox(const Camera& camera, baseHitbox& CamHitbox) {
+    glm::vec3 camPos = camera.mEye;
+    CamHitbox.setHitboxPosition(camPos.x, camPos.y, camPos.z);
+    CamHitbox.updateBounds(0.05f); // Update the bounds after setting the position
+}
 
-    int addObject(baseObject obj) { 
-        modelObjects.push_back(obj); 
-        size_t pos = modelObjects.size() - 1; 
-        return pos; 
+void UpdateCameraPosition(const baseHitbox& CamHitbox, Camera& camera) {
+    camera.mEye = glm::vec3(CamHitbox.m_xPos, CamHitbox.m_yPos, CamHitbox.m_zPos);
+}
+
+struct baseEntity : baseObject {
+    baseHitbox* mEntityHitbox;
+    baseObject* mEntityModel;
+    Application* mEntityApplication;
+
+    float time = 0.0f;
+    float step = 0.0000005f;
+
+    void singleActionScript() {
+        std::cout << "Single Action Script Called! \n";
+    }
+    void updatedActionScript() {
+        glm::vec3 playerPos = mEntityApplication->mCamera.mEye;
+        glm::vec3 curPos = glm::vec3(mEntityModel->m_xPos, mEntityModel->m_yPos, mEntityModel->m_zPos);
+        time += step;
+        if (time > 1.0f) time = 1.0f;
+        glm::vec3 newPos = (curPos + time * (playerPos - curPos));
+        mEntityModel->m_xPos = newPos.x;
+        mEntityModel->m_yPos = newPos.y;
+        mEntityModel->m_zPos = newPos.z;
+    }
+    
+    void initializeEntity() {
+        mEntityHitbox->setHitboxPosition(mEntityModel->m_xPos, mEntityModel->m_yPos, mEntityModel->m_zPos);
+        singleActionScript();
+    }
+    
+    void updateEntity() {
+        updatedActionScript();
+        mEntityHitbox->updateBounds(0.12);
+    }
+};
+
+struct baseModel : baseObject {
+    std::vector<baseObject*>modelObjects;
+    std::vector<baseHitbox*>modelHitbox;
+
+    int addObject(baseObject* obj) {
+        modelObjects.push_back(obj);
+        size_t pos = modelObjects.size() - 1;
+        return pos;
     }
 
     void moveModel(float x, float y, float z) {
         for (auto& objects : modelObjects) {
-            objects.m_xPos += (x - m_xPos);
-            objects.m_yPos += (y - m_yPos);
-            objects.m_zPos += (z - m_zPos);
+            m_xPos += x;
+            m_yPos += y;
+            m_zPos += z;
         }
     }
 
     void setModelPosition(float x, float y, float z) {
         for (auto& objects : modelObjects) {
-            m_xPos = x;
-            m_yPos = y;
-            m_zPos = z;
+            objects->m_xPos += (x - m_xPos);
+            objects->m_yPos += (y - m_yPos);
+            objects->m_zPos += (z - m_zPos);
         }
     }
 };
+
+void showHitboxes(std::vector <baseObject*> hitboxes) {
+    for (auto& hit : hitboxes) {
+
+    }
+}
 
 // vvvvvvvvvvvvvvv Global Variables vvvvvvvvvvvvvvv
 Application gApp;
 
 std::vector<baseObject* >gGameObjects;
 std::vector<baseModel* >gGameModels;
+std::vector<baseHitbox*>gGameHitboxes;
+std::vector<baseHitbox*> gGameNegativeHitboxes;
+
 baseObject gMesh1;
 baseObject gMesh2;
+
+baseHitbox gHitbox1;
+baseHitbox gEntityHitbox1;
+baseHitbox gCamHitbox;
+
+baseEntity gEntity1;
 
 unsigned int gTexture;
 unsigned int gGrassTexture;
@@ -320,6 +467,7 @@ GLuint64 loadBindlessTexture2D(const char* path) {
 void loadTextures() {
     textureHandles.push_back(loadBindlessTexture2D("assets/textures/wine.jpg"));
     textureHandles.push_back(loadBindlessTexture2D("assets/textures/GrassTextureTest.png"));
+    textureHandles.push_back(loadBindlessTexture2D("assets/textures/hitboxtexture.png"));
 }
 
 unsigned int loadTexture2D(const char* path) {
@@ -359,79 +507,6 @@ unsigned int loadTexture2D(const char* path) {
     return texture;
 }
 
-//Collision
-/*
-std::optional<glm::vec3> rayIntersectsTriangle(const glm::vec3& rayOrigin, const glm::vec3& rayVector, const Triangle& triangle) {
-    const float EPSILON = 0.0000001f;
-    glm::vec3 edge1 = triangle.v1.position - triangle.v0.position;
-    glm::vec3 edge2 = triangle.v2.position - triangle.v0.position;
-    glm::vec3 h = glm::cross(rayVector, edge2);
-    float a = glm::dot(edge1, h);
-    if (a > -EPSILON && a < EPSILON) {
-        return std::nullopt; // This ray is parallel to this triangle.
-    }
-    float f = 1.0f / a;
-    glm::vec3 s = rayOrigin - triangle.v0.position;
-    float u = f * glm::dot(s, h);
-    if (u < 0.0f || u > 1.0f) {
-        return std::nullopt;
-    }
-    glm::vec3 q = glm::cross(s, edge1);
-    float v = f * glm::dot(rayVector, q);
-    if (v < 0.0f || u + v > 1.0f) {
-        return std::nullopt;
-    }
-    // At this stage we can compute t to find out where the intersection point is on the line.
-    float t = f * glm::dot(edge2, q);
-    if (t > EPSILON) { // ray intersection
-        return rayOrigin + rayVector * t;
-    }
-    else { // This means that there is a line intersection but not a ray intersection.
-        return std::nullopt;
-    }
-}
-
-
-bool checkTriangleCollision(const Triangle& t1, const Triangle& t2) {
-    // Implement the Möller–Trumbore intersection algorithm
-    // This is a complex algorithm, so refer to detailed resources for implementation
-    return false; // Placeholder
-}
-
-void checkCollisions(const std::vector<Triangle>& model1, const std::vector<Triangle>& model2) {
-    for (const auto& t1 : model1) {
-        for (const auto& t2 : model2) {
-            if (checkTriangleCollision(t1, t2)) {
-                // Handle collision
-                std::cout << "Collision detected!" << std::endl;
-            }
-        }
-    }
-}
-
-struct BoundingSphere {
-    glm::vec3 center;
-    float radius;
-};
-
-bool checkSphereTriangleCollision(const BoundingSphere& sphere, const Triangle& triangle) {
-    // Implement sphere-triangle collision detection
-    return false; // Placeholder
-}
-
-void checkCameraCollisions(const Camera& camera, const std::vector<Triangle>& model) {
-    BoundingSphere cameraSphere;
-    cameraSphere.center = camera.mEye;
-    cameraSphere.radius = 1.0f; // Adjust the radius as needed
-
-    for (const auto& triangle : model) {
-        if (checkSphereTriangleCollision(cameraSphere, triangle)) {
-            // Handle collision
-            std::cout << "Collision detected with camera!" << std::endl;
-        }
-    }
-}
-
 // ERROR HANDLING STUFF
 static void GLClearAllErrors() {
     while (glGetError() != GL_NO_ERROR) {
@@ -446,63 +521,14 @@ static bool GLCheckErrorStatus(const char* function, int line) {
     return false;
 }
 
-*/
-
 #define GLCheck(x) GLClearAllErrors(); x; GLCheckErrorStatus(#x, __LINE__);
-
-std::string LoadShaderAsString(const std::string& filename) {
-    std::string result = "";
-
-    std::string line = "";
-    std::ifstream myFile(filename.c_str());
-
-    if (myFile.is_open()) {
-        while (std::getline(myFile, line)) {
-            result += line + '\n';
-        }
-        myFile.close();
-    }
-
-    return result;
-}
-
-GLuint CompileShader(GLuint type, const std::string& source) {
-    GLuint shaderObject;
-
-    if (type == GL_VERTEX_SHADER) {
-        shaderObject = glCreateShader(GL_VERTEX_SHADER);
-    }
-    else if (type == GL_FRAGMENT_SHADER) {
-        shaderObject = glCreateShader(GL_FRAGMENT_SHADER);
-    }
-
-    const char* src = source.c_str();
-    glShaderSource(shaderObject, 1, &src, nullptr);
-    glCompileShader(shaderObject);
-
-    return shaderObject;
-}
-
-GLuint CreateShaderProgram(const std::string& vertexshadersource, const std::string& fragmentshadersource) {
-    GLuint programObject = glCreateProgram();
-
-    GLuint myVertexShader = CompileShader(GL_VERTEX_SHADER, vertexshadersource);
-    GLuint myFragmentShader = CompileShader(GL_FRAGMENT_SHADER, fragmentshadersource);
-
-    glAttachShader(programObject, myVertexShader);
-    glAttachShader(programObject, myFragmentShader);
-    glLinkProgram(programObject);
-    glValidateProgram(programObject);
-
-    return programObject;
-}
 
 void CreateGraphicsPipeline() {
 
-    std::string vertexShaderSource = LoadShaderAsString("./shaders/vert.glsl");
-    std::string fragmentShaderSource = LoadShaderAsString("./shaders/frag.glsl");
+    std::string vertexShaderSource = pipeline::LoadShaderAsString("./shaders/vert.glsl");
+    std::string fragmentShaderSource = pipeline::LoadShaderAsString("./shaders/frag.glsl");
 
-    gApp.mGraphicsPipelineShaderProgram = CreateShaderProgram(vertexShaderSource, fragmentShaderSource);
+    gApp.mGraphicsPipelineShaderProgram = pipeline::CreateShaderProgram(vertexShaderSource, fragmentShaderSource);
 }
 
 void CreateShadowMap() {
@@ -579,14 +605,57 @@ void InitializeProgram(Application* app)
     glDepthFunc(GL_LESS);
     glFrontFace(GL_CCW);
 
-    CreateShadowMap();
-
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(app->mGraphicsApplicationWindow, true);
     ImGui_ImplOpenGL3_Init("#version 410");
+}
+
+void ShowBaseModelProperties() {
+    ImGui::Begin("Base Model Properties");
+
+    for (size_t i = 0; i < gGameObjects.size(); ++i) {
+        ImGui::PushID(static_cast<int>(i)); // Ensure unique IDs for each model
+
+        if (ImGui::TreeNode(("Model " + std::to_string(i)).c_str())) {
+            ImGui::InputFloat3("Position X", &gGameObjects[i]->m_xPos);
+            ImGui::InputFloat3("Position Y", &gGameObjects[i]->m_yPos);
+            ImGui::InputFloat3("Position Z", &gGameObjects[i]->m_zPos);
+            ImGui::InputFloat3("Scale X", &gGameObjects[i]->m_uScaleX);
+            ImGui::InputFloat3("Scale Y", &gGameObjects[i]->m_uScaleY);
+            ImGui::InputFloat3("Scale Z", &gGameObjects[i]->m_uScaleZ);
+            ImGui::InputFloat("Rotation", &gGameObjects[i]->m_uRotate);
+
+            ImGui::TreePop();
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::End();
+
+    ImGui::Begin("Base Hitboxes Properties");
+    for (size_t i = 0; i < gGameHitboxes.size(); ++i) {
+        ImGui::PushID(static_cast<int>(i)); // Ensure unique IDs for each model
+
+        if (ImGui::TreeNode(("Model " + std::to_string(i)).c_str())) {
+            ImGui::InputFloat3("Position X", &gGameHitboxes[i]->m_xPos);
+            ImGui::InputFloat3("Position Y", &gGameHitboxes[i]->m_yPos);
+            ImGui::InputFloat3("Position Z", &gGameHitboxes[i]->m_zPos);
+            ImGui::InputFloat3("Scale X", &gGameHitboxes[i]->m_uScaleX);
+            ImGui::InputFloat3("Scale Y", &gGameHitboxes[i]->m_uScaleY);
+            ImGui::InputFloat3("Scale Z", &gGameHitboxes[i]->m_uScaleZ);
+            ImGui::InputFloat("Rotation", &gGameHitboxes[i]->m_uRotate);
+
+            ImGui::TreePop();
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::End();
 }
 
 //Vertex specification
@@ -691,15 +760,32 @@ void PreDraw() {
 
     for (auto& mesh : gGameObjects) {
         mesh->model = glm::translate(glm::mat4(1.0f), glm::vec3(mesh->m_xPos, mesh->m_yPos, mesh->m_zPos));
-        mesh->model = glm::rotate(mesh->model, glm::radians(mesh->g_uRotate), glm::vec3(0.0f, 1.0f, 0.0f));
-        mesh->model = glm::scale(mesh->model, glm::vec3(mesh->g_uScale, mesh->g_uScale, mesh->g_uScale));
+        mesh->model = glm::rotate(mesh->model, glm::radians(mesh->m_uRotate), glm::vec3(0.0f, 1.0f, 0.0f));
+        mesh->model = glm::scale(mesh->model, glm::vec3(mesh->m_uScaleX, mesh->m_uScaleY, mesh->m_uScaleZ));
+    }
+
+    for (auto& mesh : gGameHitboxes) {
+        mesh->model = glm::translate(glm::mat4(1.0f), glm::vec3(mesh->m_xPos, mesh->m_yPos, mesh->m_zPos));
+        mesh->model = glm::rotate(mesh->model, glm::radians(mesh->m_uRotate), glm::vec3(0.0f, 1.0f, 0.0f));
+        mesh->model = glm::scale(mesh->model, glm::vec3(mesh->m_uScaleX, mesh->m_uScaleY, mesh->m_uScaleZ));
+    }
+
+    for (auto& mesh : gGameNegativeHitboxes) {
+        mesh->model = glm::translate(glm::mat4(1.0f), glm::vec3(mesh->m_xPos, mesh->m_yPos, mesh->m_zPos));
+        mesh->model = glm::rotate(mesh->model, glm::radians(mesh->m_uRotate), glm::vec3(0.0f, 1.0f, 0.0f));
+        mesh->model = glm::scale(mesh->model, glm::vec3(mesh->m_uScaleX, mesh->m_uScaleY, mesh->m_uScaleZ));
     }
 
     for (auto& meshObject : gGameModels) {
         for (auto& mesh : meshObject->modelObjects) {
-            mesh.model = glm::translate(glm::mat4(1.0f), glm::vec3(mesh.m_xPos, mesh.m_yPos, mesh.m_zPos));
-            mesh.model = glm::rotate(mesh.model, glm::radians(mesh.g_uRotate), glm::vec3(0.0f, 1.0f, 0.0f));
-            mesh.model = glm::scale(mesh.model, glm::vec3(mesh.g_uScale, mesh.g_uScale, mesh.g_uScale));
+            mesh->model = glm::translate(glm::mat4(1.0f), glm::vec3(mesh->m_xPos, mesh->m_yPos, mesh->m_zPos));
+            mesh->model = glm::rotate(mesh->model, glm::radians(mesh->m_uRotate), glm::vec3(0.0f, 1.0f, 0.0f));
+            mesh->model = glm::scale(mesh->model, glm::vec3(mesh->m_uScaleX, mesh->m_uScaleY, mesh->m_uScaleZ));
+        }
+        for (auto& mesh : meshObject->modelHitbox) {
+            mesh->model = glm::translate(glm::mat4(1.0f), glm::vec3(mesh->m_xPos, mesh->m_yPos, mesh->m_zPos));
+            mesh->model = glm::rotate(mesh->model, glm::radians(mesh->m_uRotate), glm::vec3(0.0f, 1.0f, 0.0f));
+            mesh->model = glm::scale(mesh->model, glm::vec3(mesh->m_uScaleX, mesh->m_uScaleY, mesh->m_uScaleZ));
         }
     }
 
@@ -739,6 +825,18 @@ void PreDraw() {
     // Set up the shader
     GLint lightSpaceMatrixLocation = glGetUniformLocation(gApp.mGraphicsPipelineShaderProgram, "u_LightSpaceMatrix");
     glUniformMatrix4fv(lightSpaceMatrixLocation, 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
+
+    UpdateCameraHitbox(gApp.mCamera, gCamHitbox);
+    gHitbox1.updateBounds(0.12f); // Apply offset to the hitbox bounds
+
+    bool isColliding = gCamHitbox.CheckCollision(gCamHitbox, gHitbox1, gGameNegativeHitboxes);
+
+    if (isColliding) {
+        gCamHitbox.ResolveCollision(gCamHitbox, gHitbox1, gGameNegativeHitboxes); // Resolve the collision
+        UpdateCameraPosition(gCamHitbox, gApp.mCamera); // Update the camera position
+    }
+
+    gEntity1.updateEntity();
 }
 
 void Draw() {
@@ -748,22 +846,58 @@ void Draw() {
     GLint u_TextureHandleLocation = glGetUniformLocation(gApp.mGraphicsPipelineShaderProgram, "u_TextureHandle");
     if (u_ModelMatrixLocation >= 0 && u_TextureHandleLocation >= 0) {
         for (auto& mesh : gGameObjects) {
-            glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &mesh->model[0][0]);
-            glUniformHandleui64ARB(u_TextureHandleLocation, mesh->textureHandle);
+            if (mesh->visible) {
+                glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &mesh->model[0][0]);
+                glUniformHandleui64ARB(u_TextureHandleLocation, mesh->textureHandle);
 
-            glBindVertexArray(mesh->mVertexArrayObject);
-            glDrawElements(GL_TRIANGLES, mesh->m_indexBufferData.size(), GL_UNSIGNED_INT, 0);
-            glBindVertexArray(0);
+                glBindVertexArray(mesh->mVertexArrayObject);
+                glDrawElements(GL_TRIANGLES, mesh->m_indexBufferData.size(), GL_UNSIGNED_INT, 0);
+                glBindVertexArray(0);
+            }
+        }
+
+        for (auto& mesh : gGameHitboxes) {
+            if (mesh->visible) {
+                glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &mesh->model[0][0]);
+                glUniformHandleui64ARB(u_TextureHandleLocation, mesh->textureHandle);
+
+                glBindVertexArray(mesh->mVertexArrayObject);
+                glDrawElements(GL_TRIANGLES, mesh->m_indexBufferData.size(), GL_UNSIGNED_INT, 0);
+                glBindVertexArray(0);
+            }
+        }
+
+        for (auto& mesh : gGameNegativeHitboxes) {
+            if (mesh->visible) {
+                glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &mesh->model[0][0]);
+                glUniformHandleui64ARB(u_TextureHandleLocation, mesh->textureHandle);
+
+                glBindVertexArray(mesh->mVertexArrayObject);
+                glDrawElements(GL_TRIANGLES, mesh->m_indexBufferData.size(), GL_UNSIGNED_INT, 0);
+                glBindVertexArray(0);
+            }
         }
 
         for (auto& meshObject : gGameModels) {
             for (auto& mesh : meshObject->modelObjects) {
-                glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &mesh.model[0][0]);
-                glUniformHandleui64ARB(u_TextureHandleLocation, mesh.textureHandle);
+                if (mesh->visible) {
+                    glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &mesh->model[0][0]);
+                    glUniformHandleui64ARB(u_TextureHandleLocation, mesh->textureHandle);
 
-                glBindVertexArray(mesh.mVertexArrayObject);
-                glDrawElements(GL_TRIANGLES, mesh.m_indexBufferData.size(), GL_UNSIGNED_INT, 0);
-                glBindVertexArray(0);
+                    glBindVertexArray(mesh->mVertexArrayObject);
+                    glDrawElements(GL_TRIANGLES, mesh->m_indexBufferData.size(), GL_UNSIGNED_INT, 0);
+                    glBindVertexArray(0);
+                }
+            }
+            for (auto& mesh : meshObject->modelHitbox) {
+                if (mesh->visible) {
+                    glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &mesh->model[0][0]);
+                    glUniformHandleui64ARB(u_TextureHandleLocation, mesh->textureHandle);
+
+                    glBindVertexArray(mesh->mVertexArrayObject);
+                    glDrawElements(GL_TRIANGLES, mesh->m_indexBufferData.size(), GL_UNSIGNED_INT, 0);
+                    glBindVertexArray(0);
+                }
             }
         }
     }
@@ -772,19 +906,27 @@ void Draw() {
         exit(EXIT_FAILURE);
     }
 
+    // Start the ImGui frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+
+    // Lighting settings window
     ImGui::Begin("Lighting Settings");
     ImGui::ColorEdit3("Lighting Color", gLight.mLightCol2);
-    gLight.mLightCol = {gLight.mLightCol2[0], gLight.mLightCol2[1] , gLight.mLightCol2[3] };
+    gLight.mLightCol = { gLight.mLightCol2[0], gLight.mLightCol2[1], gLight.mLightCol2[2] };
     ImGui::InputFloat("Lighting X", &gLight.mLightPos.x, 0.01f, 5.0f, "%.3f");
     ImGui::InputFloat("Lighting Y", &gLight.mLightPos.y, 0.01f, 5.0f, "%.3f");
-    ImGui::InputFloat("Lighting Y", &gLight.mLightPos.z, 0.01f, 5.0f, "%.3f");
+    ImGui::InputFloat("Lighting Z", &gLight.mLightPos.z, 0.01f, 5.0f, "%.3f");
     ImGui::End();
-    ImGui::EndFrame();
+
+    // Base model properties window
+    ShowBaseModelProperties();
+
+    // Render ImGui
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
 
     glUseProgram(0);
 }
@@ -827,12 +969,6 @@ int main(int argc, char* args[]) {
     objMesh1.loadFromOBJ("assets/models/wine.obj");
 
     baseObject objMesh2;
-    objMesh1.loadFromOBJ("assets/models/wine.obj");
-
-    baseObject objMesh3;
-    objMesh2.loadFromOBJ("assets/models/4wayroom.obj");
-
-    baseObject objMesh4;
     objMesh2.loadFromOBJ("assets/models/4wayroom.obj");
 
     InitializeProgram(&gApp);
@@ -846,11 +982,22 @@ int main(int argc, char* args[]) {
     gMesh2.m_indexBufferData = objMesh1.m_indexBufferData;
     gMesh2.moveObject(0.0f, 0.125f, 0.0f);
 
+    gHitbox1.m_vertexData = gPreMade.m_cubeVertexData;
+    gHitbox1.m_indexBufferData = gPreMade.m_cubeIndexBufferData;
+
+    gEntity1.mEntityHitbox = &gHitbox1;
+    gEntity1.mEntityModel = &gMesh2;
+    gEntity1.mEntityApplication = &gApp;
+    gEntity1.initializeEntity();
+
     VertexSpecification(&gMesh1, 1);
     VertexSpecification(&gMesh2, 0);
+    VertexSpecification(&gHitbox1, 2);
 
     gGameObjects.push_back(&gMesh1);
     gGameObjects.push_back(&gMesh2);
+
+    gGameHitboxes.push_back(&gHitbox1);
 
     CreateGraphicsPipeline();
 

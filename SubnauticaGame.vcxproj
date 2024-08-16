@@ -145,6 +145,7 @@
     <ClCompile Include="src\imgui\imgui_tables.cpp" />
     <ClCompile Include="src\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\Mesh3D.cpp" />
+    <ClCompile Include="src\Pipeline.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\include\Camera.hpp" />
@@ -158,6 +159,7 @@
     <ClInclude Include="dependencies\include\imgui\imstb_rectpack.h" />
     <ClInclude Include="dependencies\include\imgui\imstb_textedit.h" />
     <ClInclude Include="dependencies\include\imgui\imstb_truetype.h" />
+    <ClInclude Include="dependencies\include\Pipeline.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\frag.glsl" />
