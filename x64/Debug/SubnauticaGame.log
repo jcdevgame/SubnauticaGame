@@ -1,15 +1,15 @@
 ﻿  Main.cpp
-C:\SubnauticaGame\Main.cpp(356,1): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\SubnauticaGame\Main.cpp(367,9): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
-C:\SubnauticaGame\Main.cpp(714,34): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-C:\SubnauticaGame\Main.cpp(714,28): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-C:\SubnauticaGame\Main.cpp(737,22): warning C4305: '=': truncation from 'double' to 'float'
-C:\SubnauticaGame\Main.cpp(740,24): warning C4305: '=': truncation from 'double' to 'float'
-C:\SubnauticaGame\Main.cpp(854,96): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\SubnauticaGame\Main.cpp(865,96): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\SubnauticaGame\Main.cpp(876,96): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\SubnauticaGame\Main.cpp(888,100): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\SubnauticaGame\Main.cpp(898,100): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\SubnauticaGame\Main.cpp(356,37): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\SubnauticaGame\Main.cpp(367,16): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+C:\SubnauticaGame\Main.cpp(730,34): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\SubnauticaGame\Main.cpp(730,28): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\SubnauticaGame\Main.cpp(753,18): warning C4305: '=': truncation from 'double' to 'float'
+C:\SubnauticaGame\Main.cpp(756,18): warning C4305: '=': truncation from 'double' to 'float'
+C:\SubnauticaGame\Main.cpp(866,74): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\SubnauticaGame\Main.cpp(877,74): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\SubnauticaGame\Main.cpp(888,74): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\SubnauticaGame\Main.cpp(900,78): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\SubnauticaGame\Main.cpp(910,78): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
   SubnauticaGame.vcxproj -> C:\SubnauticaGame\x64\Debug\SubnauticaGame.exe
   'pwsh.exe' is not recognized as an internal or external command,
   operable program or batch file.

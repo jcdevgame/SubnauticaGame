@@ -31,8 +31,6 @@
 #include "Camera.hpp"
 #include "ExVertexes.h"
 
-#include <bullet/btBulletDynamicsCommon.h>
-
 struct Application {
     int             mScreenWidth = 1920;
     int             mScreenHeight = 1080;
@@ -40,33 +38,6 @@ struct Application {
     GLuint          mGraphicsPipelineShaderProgram = 0;
     bool quitApplication = false;
     Camera mCamera;
-
-    // Bullet Physics variables
-    btBroadphaseInterface* broadphase = nullptr;
-    btDefaultCollisionConfiguration* collisionConfiguration = nullptr;
-    btCollisionDispatcher* dispatcher = nullptr;
-    btSequentialImpulseConstraintSolver* solver = nullptr;
-    btDiscreteDynamicsWorld* dynamicsWorld = nullptr;
-
-    // Initialization function for Bullet Physics
-    void initializeBullet() {
-        broadphase = new btDbvtBroadphase();
-        collisionConfiguration = new btDefaultCollisionConfiguration();
-        dispatcher = new btCollisionDispatcher(collisionConfiguration);
-        solver = new btSequentialImpulseConstraintSolver();
-        dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
-        //dynamicsWorld->setGravity(btVector3(0, -9.81, 0));
-        dynamicsWorld->setGravity(btVector3(0, 0, 0));
-    }
-
-    // Cleanup function for Bullet Physics
-    void cleanupBullet() {
-        delete dynamicsWorld;
-        delete solver;
-        delete dispatcher;
-        delete collisionConfiguration;
-        delete broadphase;
-    }
 };
 
 struct Lighting {

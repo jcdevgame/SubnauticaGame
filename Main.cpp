@@ -96,7 +96,7 @@ struct baseObject {
     std::vector<GLuint> m_indexBufferData;
 
     unsigned int textureID;
-    GLuint64 textureHandle;
+    int texArrayIndex;
 
     void moveObject(float x, float y, float z) {
         m_xPos += x;
@@ -330,7 +330,7 @@ struct baseEntity : baseObject {
     Application* mEntityApplication;
 
     float time = 0.0f;
-    float step = 0.0000005f;
+    float step = 0.0000000005f;
 
     void singleActionScript() {
         std::cout << "Single Action Script Called! \n";
@@ -345,12 +345,12 @@ struct baseEntity : baseObject {
         mEntityModel->m_yPos = newPos.y;
         mEntityModel->m_zPos = newPos.z;
     }
-    
+
     void initializeEntity() {
         mEntityHitbox->setHitboxPosition(mEntityModel->m_xPos, mEntityModel->m_yPos, mEntityModel->m_zPos);
         singleActionScript();
     }
-    
+
     void updateEntity() {
         updatedActionScript();
         mEntityHitbox->updateBounds(0.12);
@@ -418,56 +418,70 @@ const unsigned int gSHADOW_WIDTH = 1024, gSHADOW_HEIGHT = 1024;
 Lighting gLight;
 
 float gSpeed = 0.001f;
+
+GLuint gTexArray;
+const char* gTexturePaths[3]{
+    "assets/textures/wine.jpg",
+    "assets/textures/GrassTextureTest.jpg",
+    "assets/textures/hitboxtexture.jpg"
+};
 // ^^^^^^^^^^^^^^^ Global Variables ^^^^^^^^^^^^^^^
-
-std::vector<GLuint64> textureHandles;
-
-GLuint64 loadBindlessTexture2D(const char* path) {
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+void loadTextureArray2D(const char* paths[], int layerCount, GLuint* TextureArray) {
+    glGenTextures(1, TextureArray);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, *TextureArray);
 
     int width, height, nrChannels;
-    unsigned char* data = stbi_load(path, &width, &height, &nrChannels, 0);
+
+    // Load the first texture to determine the format
+    unsigned char* data = stbi_load(paths[0], &width, &height, &nrChannels, 0);
     if (data) {
-        std::cout << "Texture Loaded by STB Image!" << std::endl;
-        GLenum format;
-        if (nrChannels == 1)
-            format = GL_RED;
-        else if (nrChannels == 3)
-            format = GL_RGB;
-        else if (nrChannels == 4)
-            format = GL_RGBA;
-        else {
+        if (nrChannels != 3) {
             std::cout << "Unsupported number of channels: " << nrChannels << std::endl;
             stbi_image_free(data);
-            return 0;
+            return;
         }
-
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
+        std::cout << "First texture loaded successfully with dimensions " << width << "x" << height << " and format RGB" << std::endl;
+        stbi_image_free(data);
     }
     else {
-        std::cout << "Failed to load texture" << std::endl;
-        return 0;
+        std::cout << "Failed to load first texture" << std::endl;
+        return;
     }
-    stbi_image_free(data);
 
-    // Generate and make the texture handle resident
-    GLuint64 textureHandle = glGetTextureHandleARB(texture);
-    glMakeTextureHandleResidentARB(textureHandle);
+    glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGB8, width, height, layerCount);
 
-    return textureHandle;
-}
+    for (int i = 0; i < layerCount; ++i) {
+        glBindTexture(GL_TEXTURE_2D_ARRAY, *TextureArray); // Ensure texture array is bound
+        data = stbi_load(paths[i], &width, &height, &nrChannels, 0);
+        if (data) {
+            if (nrChannels != 3) {
+                std::cout << "Texture format mismatch at layer " << i << " with " << nrChannels << " channels" << std::endl;
+                stbi_image_free(data);
+                continue;
+            }
+            std::cout << "Loaded texture " << paths[i] << " with dimensions " << width << "x" << height << " and format RGB" << std::endl;
+            glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, width, height, 1, GL_RGB, GL_UNSIGNED_BYTE, data);
+            stbi_image_free(data);
+        }
+        else {
+            std::cout << "Failed to load texture at layer " << i << std::endl;
+        }
+    }
 
-void loadTextures() {
-    textureHandles.push_back(loadBindlessTexture2D("assets/textures/wine.jpg"));
-    textureHandles.push_back(loadBindlessTexture2D("assets/textures/GrassTextureTest.png"));
-    textureHandles.push_back(loadBindlessTexture2D("assets/textures/hitboxtexture.png"));
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    // Optional: Generate mipmaps if needed
+    // glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+
+    // Check for errors
+    GLenum error = glGetError();
+    if (error != GL_NO_ERROR) {
+        std::cout << "OpenGL error: " << error << std::endl;
+    }
 }
 
 unsigned int loadTexture2D(const char* path) {
@@ -605,6 +619,8 @@ void InitializeProgram(Application* app)
     glDepthFunc(GL_LESS);
     glFrontFace(GL_CCW);
 
+    CreateShadowMap();
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -660,6 +676,8 @@ void ShowBaseModelProperties() {
 
 //Vertex specification
 void VertexSpecification(baseObject* mesh, int textureIndex) {
+    mesh->texArrayIndex = textureIndex;
+
     const std::vector<GLfloat>& vertexData = mesh->m_vertexData;
     const std::vector<GLuint>& indexBufferData = mesh->m_indexBufferData;
 
@@ -685,8 +703,6 @@ void VertexSpecification(baseObject* mesh, int textureIndex) {
 
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 11, (GLvoid*)(sizeof(GLfloat) * 8));
-
-    mesh->textureHandle = textureHandles[textureIndex];
 
     glBindVertexArray(0);
     glDisableVertexAttribArray(0);
@@ -747,14 +763,6 @@ void PreDraw() {
     glViewport(0, 0, gApp.mScreenWidth, gApp.mScreenHeight);
     glClearColor(0.0f, 1.f, 1.f, 1.f);
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
-    // Bind the first texture
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, gTexture);
-
-    // Bind the second texture
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, gDepthMap);
 
     glUseProgram(gApp.mGraphicsPipelineShaderProgram);
 
@@ -843,12 +851,16 @@ void Draw() {
     glUseProgram(gApp.mGraphicsPipelineShaderProgram);
 
     GLint u_ModelMatrixLocation = glGetUniformLocation(gApp.mGraphicsPipelineShaderProgram, "u_ModelMatrix");
-    GLint u_TextureHandleLocation = glGetUniformLocation(gApp.mGraphicsPipelineShaderProgram, "u_TextureHandle");
-    if (u_ModelMatrixLocation >= 0 && u_TextureHandleLocation >= 0) {
+    GLint u_TextureArrayIndexLocation = glGetUniformLocation(gApp.mGraphicsPipelineShaderProgram, "u_TextureArrayIndex");
+    if (u_ModelMatrixLocation >= 0 && u_TextureArrayIndexLocation >= 0) {
+        glActiveTexture(GL_TEXTURE0); // Activate the texture unit
+        glBindTexture(GL_TEXTURE_2D_ARRAY, gTexArray); // Bind the texture array
+        glUniform1i(glGetUniformLocation(gApp.mGraphicsPipelineShaderProgram, "textureArray"), 0); // Set the sampler to use texture unit 0
+
         for (auto& mesh : gGameObjects) {
             if (mesh->visible) {
                 glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &mesh->model[0][0]);
-                glUniformHandleui64ARB(u_TextureHandleLocation, mesh->textureHandle);
+                glUniform1i(u_TextureArrayIndexLocation, mesh->texArrayIndex);
 
                 glBindVertexArray(mesh->mVertexArrayObject);
                 glDrawElements(GL_TRIANGLES, mesh->m_indexBufferData.size(), GL_UNSIGNED_INT, 0);
@@ -859,7 +871,7 @@ void Draw() {
         for (auto& mesh : gGameHitboxes) {
             if (mesh->visible) {
                 glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &mesh->model[0][0]);
-                glUniformHandleui64ARB(u_TextureHandleLocation, mesh->textureHandle);
+                glUniform1i(u_TextureArrayIndexLocation, mesh->texArrayIndex);
 
                 glBindVertexArray(mesh->mVertexArrayObject);
                 glDrawElements(GL_TRIANGLES, mesh->m_indexBufferData.size(), GL_UNSIGNED_INT, 0);
@@ -870,7 +882,7 @@ void Draw() {
         for (auto& mesh : gGameNegativeHitboxes) {
             if (mesh->visible) {
                 glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &mesh->model[0][0]);
-                glUniformHandleui64ARB(u_TextureHandleLocation, mesh->textureHandle);
+                glUniform1i(u_TextureArrayIndexLocation, mesh->texArrayIndex);
 
                 glBindVertexArray(mesh->mVertexArrayObject);
                 glDrawElements(GL_TRIANGLES, mesh->m_indexBufferData.size(), GL_UNSIGNED_INT, 0);
@@ -882,7 +894,7 @@ void Draw() {
             for (auto& mesh : meshObject->modelObjects) {
                 if (mesh->visible) {
                     glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &mesh->model[0][0]);
-                    glUniformHandleui64ARB(u_TextureHandleLocation, mesh->textureHandle);
+                    glUniform1i(u_TextureArrayIndexLocation, mesh->texArrayIndex);
 
                     glBindVertexArray(mesh->mVertexArrayObject);
                     glDrawElements(GL_TRIANGLES, mesh->m_indexBufferData.size(), GL_UNSIGNED_INT, 0);
@@ -892,7 +904,7 @@ void Draw() {
             for (auto& mesh : meshObject->modelHitbox) {
                 if (mesh->visible) {
                     glUniformMatrix4fv(u_ModelMatrixLocation, 1, GL_FALSE, &mesh->model[0][0]);
-                    glUniformHandleui64ARB(u_TextureHandleLocation, mesh->textureHandle);
+                    glUniform1i(u_TextureArrayIndexLocation, mesh->texArrayIndex);
 
                     glBindVertexArray(mesh->mVertexArrayObject);
                     glDrawElements(GL_TRIANGLES, mesh->m_indexBufferData.size(), GL_UNSIGNED_INT, 0);
@@ -902,7 +914,7 @@ void Draw() {
         }
     }
     else {
-        std::cout << "Could not find u_ModelMatrix or u_TextureHandle, check spelling? \n";
+        std::cout << "Could not find u_ModelMatrix or u_TextureArrayIndex, check spelling? \n";
         exit(EXIT_FAILURE);
     }
 
@@ -926,7 +938,6 @@ void Draw() {
     // Render ImGui
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
 
     glUseProgram(0);
 }
@@ -972,8 +983,7 @@ int main(int argc, char* args[]) {
     objMesh2.loadFromOBJ("assets/models/4wayroom.obj");
 
     InitializeProgram(&gApp);
-
-    loadTextures();
+    loadTextureArray2D(gTexturePaths, 3, &gTexArray);
 
     gMesh1.m_vertexData = objMesh2.m_vertexData;
     gMesh1.m_indexBufferData = objMesh2.m_indexBufferData;
