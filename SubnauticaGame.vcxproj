@@ -137,6 +137,7 @@
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="src\Camera.cpp" />
+    <ClCompile Include="src\client.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\imgui\imgui.cpp" />
     <ClCompile Include="src\imgui\imgui_draw.cpp" />
@@ -146,9 +147,11 @@
     <ClCompile Include="src\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\Mesh3D.cpp" />
     <ClCompile Include="src\Pipeline.cpp" />
+    <ClCompile Include="src\server.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dependencies\include\Camera.hpp" />
+    <ClInclude Include="dependencies\include\client.hpp" />
     <ClInclude Include="dependencies\include\ExVertexes.h" />
     <ClInclude Include="dependencies\include\glad\glad.h" />
     <ClInclude Include="dependencies\include\imgui\imconfig.h" />
@@ -159,11 +162,16 @@
     <ClInclude Include="dependencies\include\imgui\imstb_rectpack.h" />
     <ClInclude Include="dependencies\include\imgui\imstb_textedit.h" />
     <ClInclude Include="dependencies\include\imgui\imstb_truetype.h" />
+    <ClInclude Include="dependencies\include\objects.hpp" />
     <ClInclude Include="dependencies\include\Pipeline.h" />
+    <ClInclude Include="dependencies\include\player.hpp" />
+    <ClInclude Include="dependencies\include\server.hpp" />
+    <ClInclude Include="dependencies\include\stb\stb_image.h" />
+    <ClInclude Include="dependencies\include\stb\stb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\frag.glsl" />
-    <None Include="shaders\vert.glsl" />
+    <None Include="shaders\AMD_frag.glsl" />
+    <None Include="shaders\AMD_vert.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

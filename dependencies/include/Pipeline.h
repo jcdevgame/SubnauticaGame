@@ -37,7 +37,6 @@ struct Application {
     GLFWwindow* mGraphicsApplicationWindow = nullptr;
     GLuint          mGraphicsPipelineShaderProgram = 0;
     bool quitApplication = false;
-    Camera mCamera;
 };
 
 struct Lighting {
