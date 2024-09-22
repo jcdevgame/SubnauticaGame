@@ -1,15 +1,28 @@
 ﻿  Main.cpp
-C:\CleanerSubnauticaGame\dependencies\include\objects.hpp(352,41): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\CleanerSubnauticaGame\dependencies\include\objects.hpp(363,41): warning C4305: 'argument': truncation from 'double' to 'float'
-C:\CleanerSubnauticaGame\dependencies\include\objects.hpp(375,20): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
+C:\CleanerSubnauticaGame\dependencies\include\objects.hpp(470,53): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\CleanerSubnauticaGame\dependencies\include\objects.hpp(482,53): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\CleanerSubnauticaGame\dependencies\include\objects.hpp(496,32): warning C4267: 'return': conversion from 'size_t' to 'int', possible loss of data
 C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared\minwindef.h(130,1): warning C4005: 'APIENTRY': macro redefinition
 C:\CleanerSubnauticaGame\dependencies\include\glad\glad.h(650,1): message : see previous definition of 'APIENTRY'
-C:\CleanerSubnauticaGame\Main.cpp(186,49): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-C:\CleanerSubnauticaGame\Main.cpp(186,43): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
-C:\CleanerSubnauticaGame\Main.cpp(209,18): warning C4305: '=': truncation from 'double' to 'float'
-C:\CleanerSubnauticaGame\Main.cpp(212,18): warning C4305: '=': truncation from 'double' to 'float'
-C:\CleanerSubnauticaGame\Main.cpp(291,74): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\CleanerSubnauticaGame\Main.cpp(302,74): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(48,22): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(68,26): warning C4244: '+=': conversion from 'double' to 'float', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(308,70): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\CleanerSubnauticaGame\Main.cpp(308,64): warning C4305: 'argument': truncation from 'double' to 'float'
+C:\CleanerSubnauticaGame\Main.cpp(313,47): warning C4305: '-=': truncation from 'double' to 'float'
+C:\CleanerSubnauticaGame\Main.cpp(314,91): warning C4305: '-=': truncation from 'double' to 'float'
+C:\CleanerSubnauticaGame\Main.cpp(741,49): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(741,43): warning C4244: 'argument': conversion from 'double' to 'int', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(744,56): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(747,57): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(750,53): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(753,54): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(780,129): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(780,105): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(795,141): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(795,117): warning C4244: 'argument': conversion from 'int' to 'float', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(928,74): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+C:\CleanerSubnauticaGame\Main.cpp(939,74): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
+LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
   SubnauticaGame.vcxproj -> C:\CleanerSubnauticaGame\x64\Debug\SubnauticaGame.exe
   'pwsh.exe' is not recognized as an internal or external command,
   operable program or batch file.

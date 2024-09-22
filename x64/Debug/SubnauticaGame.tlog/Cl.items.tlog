@@ -8,6 +8,6 @@ C:\CleanerSubnauticaGame\src\imgui\imgui_impl_glfw.cpp;C:\CleanerSubnauticaGame\
 C:\CleanerSubnauticaGame\src\imgui\imgui_impl_opengl3.cpp;C:\CleanerSubnauticaGame\x64\Debug\imgui_impl_opengl3.obj
 C:\CleanerSubnauticaGame\src\imgui\imgui_tables.cpp;C:\CleanerSubnauticaGame\x64\Debug\imgui_tables.obj
 C:\CleanerSubnauticaGame\src\imgui\imgui_widgets.cpp;C:\CleanerSubnauticaGame\x64\Debug\imgui_widgets.obj
-C:\CleanerSubnauticaGame\src\Mesh3D.cpp;C:\CleanerSubnauticaGame\x64\Debug\Mesh3D.obj
 C:\CleanerSubnauticaGame\src\Pipeline.cpp;C:\CleanerSubnauticaGame\x64\Debug\Pipeline.obj
+C:\CleanerSubnauticaGame\src\rooms.cpp;C:\CleanerSubnauticaGame\x64\Debug\rooms.obj
 C:\CleanerSubnauticaGame\src\server.cpp;C:\CleanerSubnauticaGame\x64\Debug\server.obj

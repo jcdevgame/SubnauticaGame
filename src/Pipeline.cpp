@@ -1,5 +1,11 @@
 #include "Pipeline.h"
 
+void Application::calculateDeltaTime() {
+    double currentTime = glfwGetTime();
+    deltaTime = currentTime - lastTime;
+    lastTime = currentTime;
+}
+
 std::string pipeline::LoadShaderAsString(const std::string& filename) {
     std::string result = "";
 

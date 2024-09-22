@@ -1,0 +1,74 @@
+{
+    "RoomArtifacts": [
+        {
+            "ImageIndex": 0,
+            "OBJPath": "",
+            "Rotation": 0.0,
+            "visible": true,
+            "xPos": -13.0,
+            "yPos": -1.0,
+            "zPos": 0.0
+        }
+    ],
+    "RoomDoors": [
+        {
+            "DoorIndex": 0,
+            "ImageIndex": 3,
+            "OBJPath": "",
+            "Rotation": 180.0,
+            "visible": true,
+            "xPos": -12.0,
+            "yPos": 0.0,
+            "zPos": 0.0
+        }
+    ],
+    "RoomFloors": [
+        {
+            "ImageIndex": 3,
+            "OBJPath": "assets/models/FloorPrototypeTrust.obj",
+            "Rotation": 0.0,
+            "visible": true,
+            "xPos": -13.0,
+            "yPos": -1.0,
+            "zPos": 0.0
+        }
+    ],
+    "RoomWalls": [
+        {
+            "ImageIndex": 3,
+            "OBJPath": "assets/models/WallPrototypeTrust.obj",
+            "Rotation": 90.0,
+            "visible": true,
+            "xPos": -13.0,
+            "yPos": 0.0,
+            "zPos": 1.0
+        },
+        {
+            "ImageIndex": 3,
+            "OBJPath": "assets/models/WallPrototypeTrust.obj",
+            "Rotation": 0.0,
+            "visible": true,
+            "xPos": -14.0,
+            "yPos": 0.0,
+            "zPos": 0.0
+        },
+        {
+            "ImageIndex": 3,
+            "OBJPath": "assets/models/WallPrototypeTrust.obj",
+            "Rotation": 0.0,
+            "visible": true,
+            "xPos": -12.0,
+            "yPos": 0.0,
+            "zPos": 0.0
+        },
+        {
+            "ImageIndex": 3,
+            "OBJPath": "assets/models/WallPrototypeTrust.obj",
+            "Rotation": 90.0,
+            "visible": true,
+            "xPos": -13.0,
+            "yPos": 0.0,
+            "zPos": -1.0
+        }
+    ]
+}

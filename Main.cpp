@@ -1,33 +1,154 @@
+#pragma region Includes
 #include "Pipeline.h"
 #include "objects.hpp"
 #include "player.hpp"
 #include <enet/enet.h>
+#include <rooms.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
+#define STB_TRUETYPE_IMPLEMENTATION
+#include <stb/stb_truetype.h>
+
 Application gApp;
 player gLocalPlayer;
+#pragma endregion
+#pragma region Custom Objects
+struct cockroachEntity : objects::baseEntity {
+    float time = 0.0f;
+    float step = 0.00025f;
+    float playerDist;
+    bool attacking = true;
 
-// vvvvvvvvvvvvvvv Global Variables vvvvvvvvvvvvvv
+    float homePointDist;
+    glm::vec3 homepoint = glm::vec3(0, 0, 0);
+
+    float getPlayerDist() {
+        glm::vec3 playerPosition = gLocalPlayer.m_PlayerCamera.mEye;
+        glm::vec3 currentPosition = glm::vec3(m_xPos, m_yPos, m_zPos);
+        float plrDistance = glm::distance(playerPosition, currentPosition);
+        return plrDistance;
+    }
+
+    float getHomepointDist() {
+        glm::vec3 playerPosition = homepoint;
+        glm::vec3 currentPosition = glm::vec3(m_xPos, m_yPos, m_zPos);
+        float ointDist = glm::distance(playerPosition, currentPosition);
+        return ointDist;
+    }
+
+    void singleActionScript() override {
+        std::cout << "Single Action Script Called! \n";
+    }
+
+    void gobacktohomepoint() {
+        glm::vec3 playerPos = homepoint;
+        glm::vec3 curPos = glm::vec3(mEntityModel->m_xPos, mEntityModel->m_yPos, mEntityModel->m_zPos);
+        time += step * gApp.deltaTime;
+        if (time > 1.0f) time = 1.0f;
+        glm::vec3 newPos = (curPos + time * (playerPos - curPos));
+        mEntityModel->m_xPos = newPos.x;
+        mEntityModel->m_yPos = newPos.y;
+        mEntityModel->m_zPos = newPos.z;
+
+        // Check if the cockroach has reached the homepoint
+        if (glm::distance(newPos, homepoint) <= 0.25f) { // Adjust the distance threshold as needed
+            attacking = true;
+            time = 0.0f; // Reset time for the next movement
+        }
+    }
+
+    void updatedActionScript() override {
+        float distance = getPlayerDist();
+
+        if (distance <= 6.0f && attacking) {
+            glm::vec3 playerPos = gLocalPlayer.m_PlayerCamera.mEye;
+            glm::vec3 curPos = glm::vec3(mEntityModel->m_xPos, mEntityModel->m_yPos, mEntityModel->m_zPos);
+            time += step * gApp.deltaTime;
+            if (time > 1.0f) time = 1.0f;
+            glm::vec3 newPos = (curPos + time * (playerPos - curPos));
+            mEntityModel->m_xPos = newPos.x;
+            mEntityModel->m_yPos = newPos.y;
+            mEntityModel->m_zPos = newPos.z;
+        }
+        else if (!attacking) {
+            gobacktohomepoint();
+        }
+    }
+};
+
+struct oxygenArtifact : objects::gameArtifact {
+    void onCollectFunction() override {
+        std::cout << "Refilled Oxygen";
+        gLocalPlayer.playerCurrentOxygen = 100;
+        m_xPos = 100000000.0f;
+    }
+};
+
+struct nuclearArtifact : objects::gameArtifact {
+    void onCollectFunction() override {
+        std::cout << "Collected Nuclear Core! \n";
+    }
+};
+#pragma endregion
+#pragma region Global Variables
 std::vector<objects::baseObject* >gGameObjects;
 std::vector<objects::baseHitbox*>gGameHitboxes;
+std::vector<objects::baseHitbox*>gGameNegativeHitboxes;
+std::vector<objects::baseHitbox*>gWallsAndFloors;
+std::vector<objects::baseHitbox*>gWalls;
+std::vector<objects::baseHitbox*>gFloors;
+std::vector<objects::gameArtifact*>gRoomArtifacts;
+std::vector<objects::gameArtifact*>gArtifacts;
+std::vector<objects::gameDoor*>gGameDoors;
+std::vector<objects::gameDoor*>gRoomDoors;
 
 objects::baseObject gMesh1;
 objects::baseObject gMesh2;
+objects::baseHitbox gWall1;
+objects::baseHitbox gWall2;
+objects::baseHitbox gWall3;
+objects::baseHitbox gWall4;
+objects::baseHitbox gFloor1;
+objects::baseHitbox gFloor2;
+objects::baseHitbox gCockroachHitbox1;
+objects::baseHitbox gCamHitbox;
+
+cockroachEntity cockroachEntity1;
+
+objects::gameArtifact testArtifact;
+objects::gameDoor l_Door1;
+objects::gameDoor l_Door2;
+
+oxygenArtifact oxygenArtifact1;
+nuclearArtifact gNuclearCore;
+
+glm::mat4 perspective;
 ExVertexes gPreMade;
 Lighting gLight;
 
-float gSpeed = 0.001f;
+roomLoading::submarineRoom room;
+
+double gDeltaTime = 0.0;
+float gSpeed = 5;
+char gDocumentCreature;
+bool gDocumentingCreature = false;
+
+bool documentedCreatures[2]{
+    false, // Cockroach [0]
+    false  // Next Entity [1]
+};
 
 GLuint gTexArray;
-const char* gTexturePaths[3]{
+const char* gTexturePaths[4] = {
     "assets/textures/wine.jpg",
     "assets/textures/GrassTextureTest.jpg",
-    "assets/textures/hitboxtexture.jpg"
+    "assets/textures/hitboxtexture.jpg",
+    "assets/textures/TexturePlz.jpg",
 };
-// ^^^^^^^^^^^^^^^ Global Variables ^^^^^^^^^^^^^^^
-
+#pragma endregion
+#pragma region Graphics Pipeline Initialization
 void loadTextureArray2D(const char* paths[], int layerCount, GLuint* TextureArray) {
     glGenTextures(1, TextureArray);
     glBindTexture(GL_TEXTURE_2D_ARRAY, *TextureArray);
@@ -82,7 +203,8 @@ void CreateGraphicsPipeline() {
 
     gApp.mGraphicsPipelineShaderProgram = pipeline::CreateShaderProgram(vertexShaderSource, fragmentShaderSource);
 }
-
+#pragma endregion
+#pragma region Application Initialization
 void GetOpenGLVersionInfo() {
     std::cout << "-------------------- \n";
     std::cout << "OpenGL version info: \n";
@@ -126,10 +248,16 @@ void InitializeProgram(Application* app)
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glFrontFace(GL_CCW);
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(app->mGraphicsApplicationWindow, true);
+    ImGui_ImplOpenGL3_Init("#version 410");
 }
-
-
-//Vertex specification
+#pragma endregion
+#pragma region Object Initialization
 void VertexSpecification(objects::baseObject* mesh, int textureIndex) {
 
     const std::vector<GLfloat>& vertexData = mesh->m_vertexData;
@@ -166,6 +294,431 @@ void VertexSpecification(objects::baseObject* mesh, int textureIndex) {
 
     mesh->texArrayIndex = textureIndex;
 }
+#pragma endregion
+#pragma region ImGUI Windows
+void ShowPlayerProperties() {
+    ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetIO().DisplaySize.y - 60), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(320, 60), ImGuiCond_Always);
+    ImGui::Begin("Health", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+    float healthPercentage = gLocalPlayer.playerCurrentHealth / gLocalPlayer.playerMaxHealth;
+
+    // Set the size of the health bar
+    ImVec2 barSize = ImVec2(300, 20);
+
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.00, 0.98, 0.65, 1.0));
+    ImGui::ProgressBar(healthPercentage, barSize, "");
+    ImGui::PopStyleColor();
+    ImGui::End();
+
+    gLocalPlayer.playerCurrentOxygen -= 0.0001;
+    if (gLocalPlayer.playerCurrentOxygen <= 0) { gLocalPlayer.playerCurrentHealth -= 0.005; }
+
+    ImGui::SetNextWindowPos(ImVec2(0, ImGui::GetIO().DisplaySize.y - 120), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(320, 60), ImGuiCond_Always);
+    ImGui::Begin("Oxygen", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+    float oxygenPercentage = gLocalPlayer.playerCurrentOxygen / gLocalPlayer.playerMaxOxygen;
+
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.00, 1.00, 1.00, 1.0));
+    ImGui::ProgressBar(oxygenPercentage, barSize, "");
+    ImGui::PopStyleColor();
+    ImGui::End();
+}
+
+bool showDocumentEntityWindow = true;
+bool showDocumentedEntityWindow = false;
+
+void ShowDocumentEntityProperty() {
+    if (gDocumentCreature == 'C' && showDocumentEntityWindow) {
+        gLocalPlayer.m_PlayerCamera.enabled = false;
+        glfwSetInputMode(gApp.mGraphicsApplicationWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+        ImGui::Begin("Documented Creature:", nullptr, ImGuiWindowFlags_NoCollapse);
+
+        // Add the text
+        ImGui::Text("Shrimp thingy");
+        ImGui::TextDisabled("The Shrimp thingy is an aggressive creature,");
+        ImGui::TextDisabled("that does quick attacks and runs away.");
+        ImGui::TextDisabled("");
+        ImGui::TextDisabled("");
+        ImGui::TextDisabled("TAB to open Documented Creatures tab");
+
+        if (ImGui::Button("Document")) {
+            gDocumentingCreature = false;
+            gDocumentCreature = NULL;
+
+            gLocalPlayer.m_PlayerCamera.enabled = true;
+            glfwSetCursorPos(gApp.mGraphicsApplicationWindow, gApp.mScreenWidth / 2, gApp.mScreenHeight / 2);
+            glfwSetInputMode(gApp.mGraphicsApplicationWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+            // Hide the window
+            showDocumentEntityWindow = false;
+            documentedCreatures[0] = true;
+        }
+
+        ImGui::End();
+    }
+}
+
+void showDocumentedCreatures() {
+    if (showDocumentedEntityWindow)
+    {
+        gLocalPlayer.m_PlayerCamera.enabled = false;
+        glfwSetInputMode(gApp.mGraphicsApplicationWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        ImGui::Begin("Documented Creatures:", nullptr, ImGuiWindowFlags_NoCollapse);
+
+        if (documentedCreatures[0]) {
+            ImGui::Text("Shrimp thingy");
+        }
+
+        ImGui::End();
+    }
+}
+
+void wallEditing() {
+    ImGui::Begin("Room Wall Editing");
+
+    for (size_t i = 0; i < gWalls.size(); ++i) {
+        ImGui::PushID(static_cast<int>(i)); // Ensure unique IDs for each model
+
+        if (ImGui::TreeNode(("Model " + std::to_string(i)).c_str())) {
+            // Position X
+            ImGui::Text("Position X");
+            ImGui::SameLine();
+            if (ImGui::Button("-##PosX")) {
+                gWalls[i]->m_xPos -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gWalls[i]->m_xPos);
+            ImGui::SameLine();
+            if (ImGui::Button("+##PosX")) {
+                gWalls[i]->m_xPos += 1.0f;
+            }
+
+            // Position Y
+            ImGui::Text("Position Y");
+            ImGui::SameLine();
+            if (ImGui::Button("-##PosY")) {
+                gWalls[i]->m_yPos -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gWalls[i]->m_yPos);
+            ImGui::SameLine();
+            if (ImGui::Button("+##PosY")) {
+                gWalls[i]->m_yPos += 1.0f;
+            }
+
+            // Position Z
+            ImGui::Text("Position Z");
+            ImGui::SameLine();
+            if (ImGui::Button("-##PosZ")) {
+                gWalls[i]->m_zPos -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gWalls[i]->m_zPos);
+            ImGui::SameLine();
+            if (ImGui::Button("+##PosZ")) {
+                gWalls[i]->m_zPos += 1.0f;
+            }
+
+            ImGui::Text("Rotation");
+            ImGui::SameLine();
+            if (ImGui::Button("-##Rotation")) {
+                gWalls[i]->m_uRotate -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gWalls[i]->m_uRotate);
+            ImGui::SameLine();
+            if (ImGui::Button("+##Rotation")) {
+                gWalls[i]->m_uRotate += 15.0f;
+            }
+            // Texture Array Index
+            ImGui::InputInt("Texture Array Index", &gWalls[i]->texArrayIndex);
+
+            if (ImGui::Button("Save To Room")) {
+                room.RoomWalls.push_back(gWalls[i]);
+                roomLoading::saveToJson(room, "roomData.json");
+            }
+
+            ImGui::TreePop();
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::End();
+}
+
+void floorEditing() {
+    ImGui::Begin("Room Floor Editing");
+
+    for (size_t i = 0; i < gFloors.size(); ++i) {
+        ImGui::PushID(static_cast<int>(i)); // Ensure unique IDs for each model
+
+        if (ImGui::TreeNode(("Model " + std::to_string(i)).c_str())) {
+            // Position X
+            ImGui::Text("Position X");
+            ImGui::SameLine();
+            if (ImGui::Button("-##PosX")) {
+                gFloors[i]->m_xPos -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gFloors[i]->m_xPos);
+            ImGui::SameLine();
+            if (ImGui::Button("+##PosX")) {
+                gFloors[i]->m_xPos += 1.0f;
+            }
+
+            // Position Y
+            ImGui::Text("Position Y");
+            ImGui::SameLine();
+            if (ImGui::Button("-##PosY")) {
+                gFloors[i]->m_yPos -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gFloors[i]->m_yPos);
+            ImGui::SameLine();
+            if (ImGui::Button("+##PosY")) {
+                gFloors[i]->m_yPos += 1.0f;
+            }
+
+            // Position Z
+            ImGui::Text("Position Z");
+            ImGui::SameLine();
+            if (ImGui::Button("-##PosZ")) {
+                gFloors[i]->m_zPos -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gFloors[i]->m_zPos);
+            ImGui::SameLine();
+            if (ImGui::Button("+##PosZ")) {
+                gFloors[i]->m_zPos += 1.0f;
+            }
+
+            ImGui::Text("Rotation");
+            ImGui::SameLine();
+            if (ImGui::Button("-##Rotation")) {
+                gFloors[i]->m_uRotate -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gFloors[i]->m_uRotate);
+            ImGui::SameLine();
+            if (ImGui::Button("+##Rotation")) {
+                gFloors[i]->m_uRotate += 15.0f;
+            }
+            // Texture Array Index
+            ImGui::InputInt("Texture Array Index", &gFloors[i]->texArrayIndex);
+
+            if (ImGui::Button("Save To Room")) {
+                room.RoomFloors.push_back(gFloors[i]);
+                roomLoading::saveToJson(room, "roomData.json");
+            }
+
+            ImGui::TreePop();
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::End();
+}
+
+void ArtifactEditing() {
+    ImGui::Begin("Room Artifact Editing");
+
+    for (size_t i = 0; i < gRoomArtifacts.size(); ++i) {
+        ImGui::PushID(static_cast<int>(i)); // Ensure unique IDs for each model
+
+        if (ImGui::TreeNode(("Model " + std::to_string(i)).c_str())) {
+            // Position X
+            ImGui::Text("Position X");
+            ImGui::SameLine();
+            if (ImGui::Button("-##PosX")) {
+                gRoomArtifacts[i]->m_xPos -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gRoomArtifacts[i]->m_xPos);
+            ImGui::SameLine();
+            if (ImGui::Button("+##PosX")) {
+                gRoomArtifacts[i]->m_xPos += 1.0f;
+            }
+
+            // Position Y
+            ImGui::Text("Position Y");
+            ImGui::SameLine();
+            if (ImGui::Button("-##PosY")) {
+                gRoomArtifacts[i]->m_yPos -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gRoomArtifacts[i]->m_yPos);
+            ImGui::SameLine();
+            if (ImGui::Button("+##PosY")) {
+                gRoomArtifacts[i]->m_yPos += 1.0f;
+            }
+
+            // Position Z
+            ImGui::Text("Position Z");
+            ImGui::SameLine();
+            if (ImGui::Button("-##PosZ")) {
+                gRoomArtifacts[i]->m_zPos -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gRoomArtifacts[i]->m_zPos);
+            ImGui::SameLine();
+            if (ImGui::Button("+##PosZ")) {
+                gRoomArtifacts[i]->m_zPos += 1.0f;
+            }
+
+            ImGui::Text("Rotation");
+            ImGui::SameLine();
+            if (ImGui::Button("-##Rotation")) {
+                gRoomArtifacts[i]->m_uRotate -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gRoomArtifacts[i]->m_uRotate);
+            ImGui::SameLine();
+            if (ImGui::Button("+##Rotation")) {
+                gRoomArtifacts[i]->m_uRotate += 15.0f;
+            }
+            // Texture Array Index
+            ImGui::InputInt("Texture Array Index", &gRoomArtifacts[i]->texArrayIndex);
+
+            if (ImGui::Button("Save To Room")) {
+                room.RoomArtifacts.push_back(gRoomArtifacts[i]);
+                roomLoading::saveToJson(room, "roomData.json");
+            }
+
+            ImGui::TreePop();
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::End();
+}
+
+void DoorEditing() {
+    ImGui::Begin("Room Door Editing");
+
+    for (size_t i = 0; i < gRoomDoors.size(); ++i) {
+        ImGui::PushID(static_cast<int>(i)); // Ensure unique IDs for each model
+
+        if (ImGui::TreeNode(("Model " + std::to_string(i)).c_str())) {
+            // Position X
+            ImGui::Text("Position X");
+            ImGui::SameLine();
+            if (ImGui::Button("-##PosX")) {
+                gRoomDoors[i]->m_xPos -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gRoomDoors[i]->m_xPos);
+            ImGui::SameLine();
+            if (ImGui::Button("+##PosX")) {
+                gRoomDoors[i]->m_xPos += 1.0f;
+            }
+
+            // Position Y
+            ImGui::Text("Position Y");
+            ImGui::SameLine();
+            if (ImGui::Button("-##PosY")) {
+                gRoomDoors[i]->m_yPos -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gRoomDoors[i]->m_yPos);
+            ImGui::SameLine();
+            if (ImGui::Button("+##PosY")) {
+                gRoomDoors[i]->m_yPos += 1.0f;
+            }
+
+            // Position Z
+            ImGui::Text("Position Z");
+            ImGui::SameLine();
+            if (ImGui::Button("-##PosZ")) {
+                gRoomDoors[i]->m_zPos -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gRoomDoors[i]->m_zPos);
+            ImGui::SameLine();
+            if (ImGui::Button("+##PosZ")) {
+                gRoomDoors[i]->m_zPos += 1.0f;
+            }
+
+            ImGui::Text("Rotation");
+            ImGui::SameLine();
+            if (ImGui::Button("-##Rotation")) {
+                gRoomDoors[i]->m_uRotate -= 1.0f;
+            }
+            ImGui::SameLine();
+            ImGui::Text("%.2f", gRoomDoors[i]->m_uRotate);
+            ImGui::SameLine();
+            if (ImGui::Button("+##Rotation")) {
+                gRoomDoors[i]->m_uRotate += 15.0f;
+            }
+            // Texture Array Index
+            ImGui::InputInt("Texture Array Index", &gRoomDoors[i]->texArrayIndex);
+
+            if (ImGui::Button("Save To Room")) {
+                room.RoomDoors.push_back(gRoomDoors[i]);
+                roomLoading::saveToJson(room, "roomData.json");
+            }
+
+            ImGui::TreePop();
+        }
+
+        ImGui::PopID();
+    }
+
+    ImGui::End();
+}
+
+#pragma endregion
+#pragma region User Input
+bool db = false;
+bool db2 = false;
+
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    // Pass the input event to ImGui first
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantCaptureKeyboard) {
+        return;
+    }
+
+    // Handle backspace key
+    if (key == GLFW_KEY_BACKSPACE && action == GLFW_PRESS) {
+        // Process backspace key event
+        io.KeysDown[GLFW_KEY_BACKSPACE] = true;
+    }
+    else if (key == GLFW_KEY_BACKSPACE && action == GLFW_RELEASE) {
+        io.KeysDown[GLFW_KEY_BACKSPACE] = false;
+    }
+
+    // Your existing key handling logic
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        if (!db2) {
+            gLocalPlayer.m_PlayerCamera.enabled = false;
+            glfwSetInputMode(gApp.mGraphicsApplicationWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            db = true;
+        }
+        else if (db2) {
+            db = false;
+            gLocalPlayer.m_PlayerCamera.enabled = true;
+            glfwSetCursorPos(gApp.mGraphicsApplicationWindow, gApp.mScreenWidth / 2, gApp.mScreenHeight / 2);
+            glfwSetInputMode(gApp.mGraphicsApplicationWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+    }
+    else if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
+        if (!db) {
+            showDocumentedEntityWindow = true;
+            db = true;
+        }
+        else if (db) {
+            showDocumentedEntityWindow = false;
+            db = false;
+            gLocalPlayer.m_PlayerCamera.enabled = true;
+            glfwSetCursorPos(gApp.mGraphicsApplicationWindow, gApp.mScreenWidth / 2, gApp.mScreenHeight / 2);
+            glfwSetInputMode(gApp.mGraphicsApplicationWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+    }
+}
 
 //Game Loop
 void Input() {
@@ -183,36 +736,78 @@ void Input() {
 
     double xpos, ypos;
     glfwGetCursorPos(gApp.mGraphicsApplicationWindow, &xpos, &ypos);
+    xpos = xpos * 0.15;
+    ypos = ypos * 0.15;
     gLocalPlayer.m_PlayerCamera.MouseLook(xpos, ypos);
 
     if (glfwGetKey(gApp.mGraphicsApplicationWindow, GLFW_KEY_W) == GLFW_PRESS) {
-        gLocalPlayer.m_PlayerCamera.MoveForward(gSpeed);
+        gLocalPlayer.m_PlayerCamera.MoveForward(gSpeed * gApp.deltaTime);
     }
     if (glfwGetKey(gApp.mGraphicsApplicationWindow, GLFW_KEY_S) == GLFW_PRESS) {
-        gLocalPlayer.m_PlayerCamera.MoveBackward(gSpeed);
+        gLocalPlayer.m_PlayerCamera.MoveBackward(gSpeed * gApp.deltaTime);
     }
     if (glfwGetKey(gApp.mGraphicsApplicationWindow, GLFW_KEY_A) == GLFW_PRESS) {
-        gLocalPlayer.m_PlayerCamera.MoveLeft(gSpeed);
+        gLocalPlayer.m_PlayerCamera.MoveLeft(gSpeed * gApp.deltaTime);
     }
     if (glfwGetKey(gApp.mGraphicsApplicationWindow, GLFW_KEY_D) == GLFW_PRESS) {
-        gLocalPlayer.m_PlayerCamera.MoveRight(gSpeed);
+        gLocalPlayer.m_PlayerCamera.MoveRight(gSpeed * gApp.deltaTime);
     }
-    if (glfwGetKey(gApp.mGraphicsApplicationWindow, GLFW_KEY_1) == GLFW_PRESS) {
-        gLocalPlayer.m_PlayerCamera.enabled = false;
-        glfwSetInputMode(gApp.mGraphicsApplicationWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    }
-    if (glfwGetKey(gApp.mGraphicsApplicationWindow, GLFW_KEY_2) == GLFW_PRESS) {
-        gLocalPlayer.m_PlayerCamera.enabled = true;
-        glfwSetInputMode(gApp.mGraphicsApplicationWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    }
-    if (glfwGetKey(gApp.mGraphicsApplicationWindow, GLFW_KEY_3) == GLFW_PRESS) {
-        gSpeed = 0.01;
-    }
-    if (glfwGetKey(gApp.mGraphicsApplicationWindow, GLFW_KEY_4) == GLFW_PRESS) {
-        gSpeed = 0.0001;
+
+    glfwSetKeyCallback(gApp.mGraphicsApplicationWindow, KeyCallback);
+}
+
+void handleWallsAndFloorsCollision(objects::baseHitbox& collider, objects::baseEntity& ent, bool CamCollision = false) {
+    for (auto& hitboxes : gWallsAndFloors) {
+        hitboxes->updateBounds(0.12f);
+        bool collision = collider.CheckCollision(collider, *hitboxes, gGameNegativeHitboxes);
+
+        if (collision) {
+            if (CamCollision)
+            {
+                gCamHitbox.ResolveCollision(gCamHitbox, *hitboxes, gGameNegativeHitboxes);
+                UpdateCameraPosition(gCamHitbox, gLocalPlayer.m_PlayerCamera); // Update the camera position
+            }
+            else {
+                collider.ResolveCollision(collider, *hitboxes, gGameNegativeHitboxes);
+                ent.updatedEntityPosition();
+            }
+        }
     }
 }
 
+void handleArtifactCollection() {
+    for (auto& artifact : gArtifacts) {
+        bool artifactClicked = artifact->CheckMouseClick(gLocalPlayer.m_PlayerCamera, gApp.mScreenWidth / 2, gApp.mScreenHeight / 2, gApp.mScreenWidth, gApp.mScreenHeight, perspective, gLocalPlayer.m_PlayerCamera.GetViewMatrix());
+        if (artifactClicked) {
+            artifact->onCollectFunction();
+        }
+    }
+}
+
+void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    // Call ImGui's mouse button callback
+    ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+
+    if (!gDocumentingCreature) {
+        if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+            handleArtifactCollection();
+
+            bool isHoveringOver1 = gCockroachHitbox1.CheckMouseClick(gLocalPlayer.m_PlayerCamera, gApp.mScreenWidth / 2, gApp.mScreenHeight / 2, gApp.mScreenWidth, gApp.mScreenHeight, perspective, gLocalPlayer.m_PlayerCamera.GetViewMatrix());
+            if (isHoveringOver1) {
+                if (!documentedCreatures[0]) {
+                    gDocumentCreature = 'C';
+                    showDocumentEntityWindow = true; // Show the window
+                }
+                else {
+                    std::cout << "Creature Documentation Manager: Creature[0] already documented \n";
+                }
+            }
+            cockroachEntity1.updateEntity();
+        }
+    }
+}
+#pragma endregion
+#pragma region Draw and Perspective
 void PreDraw() {
     glEnable(GL_DEPTH_TEST);
 
@@ -221,6 +816,9 @@ void PreDraw() {
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
     glUseProgram(gApp.mGraphicsPipelineShaderProgram);
+
+    // Update the cockroach entity's position
+    cockroachEntity1.updatedActionScript();
 
     for (auto& mesh : gGameObjects) {
         mesh->model = glm::translate(glm::mat4(1.0f), glm::vec3(mesh->m_xPos, mesh->m_yPos, mesh->m_zPos));
@@ -245,7 +843,7 @@ void PreDraw() {
         exit(EXIT_FAILURE);
     }
 
-    glm::mat4 perspective = glm::perspective(glm::radians(45.0f), (float)gApp.mScreenWidth / (float)gApp.mScreenHeight, 0.1f, 50.0f);
+    perspective = glm::perspective(glm::radians(45.0f), (float)gApp.mScreenWidth / (float)gApp.mScreenHeight, 0.1f, 50.0f);
     GLint u_ProjectionLocation = glGetUniformLocation(gApp.mGraphicsPipelineShaderProgram, "u_Projection");
     if (u_ProjectionLocation >= 0) {
         glUniformMatrix4fv(u_ProjectionLocation, 1, GL_FALSE, &perspective[0][0]);
@@ -270,6 +868,45 @@ void PreDraw() {
     // Set up the shader
     GLint lightSpaceMatrixLocation = glGetUniformLocation(gApp.mGraphicsPipelineShaderProgram, "u_LightSpaceMatrix");
     glUniformMatrix4fv(lightSpaceMatrixLocation, 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
+
+    UpdateCameraHitbox(gLocalPlayer.m_PlayerCamera, gCamHitbox);
+    gCockroachHitbox1.updateBounds(0.12f); // Apply offset to the hitbox bounds
+
+    handleWallsAndFloorsCollision(gCamHitbox, gLocalPlayer, true);
+    handleWallsAndFloorsCollision(gCockroachHitbox1, cockroachEntity1, false);
+
+    bool isColliding1 = gCockroachHitbox1.CheckCollision(gCockroachHitbox1, gCamHitbox, gGameNegativeHitboxes);
+
+    if (isColliding1) {
+        gCamHitbox.ResolveCollision(gCamHitbox, gCockroachHitbox1, gGameNegativeHitboxes); // Resolve the collision
+        UpdateCameraPosition(gCamHitbox, gLocalPlayer.m_PlayerCamera); // Update the camera position
+
+        if (cockroachEntity1.attacking) {
+            cockroachEntity1.attacking = false;
+            gLocalPlayer.playerCurrentHealth -= 10;
+        }
+    }
+
+    glfwSetMouseButtonCallback(gApp.mGraphicsApplicationWindow, MouseButtonCallback);
+    cockroachEntity1.updateEntity();
+}
+
+void RenderImGui() {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ShowPlayerProperties();
+    ShowDocumentEntityProperty();
+    showDocumentedCreatures();
+    wallEditing();
+    floorEditing();
+    ArtifactEditing();
+    DoorEditing();
+
+    // Render ImGui
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 void Draw() {
@@ -309,21 +946,27 @@ void Draw() {
         exit(EXIT_FAILURE);
     }
 
+    RenderImGui();
+
     glUseProgram(0);
 }
-
+#pragma endregion
+#pragma region Main Functions
 void MainLoop()
 {
     glfwSetCursorPos(gApp.mGraphicsApplicationWindow, gApp.mScreenWidth / 2, gApp.mScreenHeight / 2);
     glfwSetInputMode(gApp.mGraphicsApplicationWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
+    double lastFrame = glfwGetTime();
+
     while (!gApp.quitApplication)
     {
+        gApp.calculateDeltaTime();
         Input();
         PreDraw();
         Draw();
-
         glfwSwapBuffers(gApp.mGraphicsApplicationWindow);
+        glfwPollEvents();
     }
 }
 
@@ -331,25 +974,183 @@ void CleanUp()
 {
     glfwDestroyWindow(gApp.mGraphicsApplicationWindow);
     glfwTerminate();
+
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 }
 
+void LoadRoomsIntoGame() {
+    roomLoading::loadFromJson(room, "roomData.json");
+    for (auto& wall : room.RoomWalls) {
+        wall->loadFromOBJ(wall->OBJFilePath);
+
+        std::cout << "Wall Position: " << wall->m_xPos << ", " << wall->m_yPos << ", " << wall->m_zPos << "\n";
+
+        VertexSpecification(wall, wall->texArrayIndex);
+        gGameHitboxes.push_back(wall);
+        gWalls.push_back(wall);
+        gWallsAndFloors.push_back(wall);
+    }
+    for (auto& floor : room.RoomFloors) {
+        floor->loadFromOBJ(floor->OBJFilePath);
+
+        std::cout << "Floor Position: " << floor->m_xPos << ", " << floor->m_yPos << ", " << floor->m_zPos << "\n";
+
+        VertexSpecification(floor, floor->texArrayIndex);
+        gGameHitboxes.push_back(floor);
+        gFloors.push_back(floor);
+        gWallsAndFloors.push_back(floor);
+    }
+    for (auto& artifact : room.RoomArtifacts) {
+        if(!artifact->OBJFilePath.empty())
+        {
+            artifact->loadFromOBJ(artifact->OBJFilePath);
+        }
+        else {
+            artifact->m_vertexData = gPreMade.m_cubeVertexData;
+            artifact->m_indexBufferData = gPreMade.m_cubeIndexBufferData;
+        }
+        std::cout << "Artifact Position: " << artifact->m_xPos << ", " << artifact->m_yPos << ", " << artifact->m_zPos << "\n";
+
+        VertexSpecification(artifact, artifact->texArrayIndex);
+        gGameHitboxes.push_back(artifact);
+        gRoomArtifacts.push_back(artifact);
+        gArtifacts.push_back(artifact);
+        gWallsAndFloors.push_back(artifact);
+    }
+    for (auto& door : room.RoomDoors) {
+        if (!door->OBJFilePath.empty())
+        {
+            door->loadFromOBJ(door->OBJFilePath);
+        }
+        else {
+            door->m_vertexData = gPreMade.m_cubeVertexData;
+            door->m_indexBufferData = gPreMade.m_cubeIndexBufferData;
+        }
+        std::cout << "Door Position: " << door->m_xPos << ", " << door->m_yPos << ", " << door->m_zPos << "\n";
+
+        VertexSpecification(door, door->texArrayIndex);
+        door->gameDoors = &gGameDoors;
+        door->PlayerCamera = &gLocalPlayer.m_PlayerCamera;
+        gGameHitboxes.push_back(door);
+        gRoomDoors.push_back(door);
+        gGameDoors.push_back(door);
+        gArtifacts.push_back(door);
+        gWallsAndFloors.push_back(door);
+    }
+}
+
 void clientActions() {
     InitializeProgram(&gApp);
-    loadTextureArray2D(gTexturePaths, 3, &gTexArray);
+    loadTextureArray2D(gTexturePaths, 4, &gTexArray);
+
+    l_Door1.m_vertexData = gPreMade.m_cubeVertexData;
+    l_Door1.m_indexBufferData = gPreMade.m_cubeIndexBufferData;
+    l_Door1.DoorIndex = 0;
+    l_Door1.gameDoors = &gGameDoors;
+    l_Door1.PlayerCamera = &gLocalPlayer.m_PlayerCamera;
+    l_Door1.m_xPos += 5;
+
+    l_Door2.m_vertexData = gPreMade.m_cubeVertexData;
+    l_Door2.m_indexBufferData = gPreMade.m_cubeIndexBufferData;
+    l_Door2.DoorIndex = 1;
+    l_Door2.gameDoors = &gGameDoors;
+    l_Door2.PlayerCamera = &gLocalPlayer.m_PlayerCamera;
+    l_Door2.m_xPos -= 5;
+    l_Door2.m_uRotate = 180;
 
     gMesh1.m_vertexData = gPreMade.m_cubeVertexData;
     gMesh1.m_indexBufferData = gPreMade.m_cubeIndexBufferData;
 
+    gCockroachHitbox1.m_vertexData = gPreMade.m_cubeVertexData;
+    gCockroachHitbox1.m_indexBufferData = gPreMade.m_cubeIndexBufferData;
+
+    testArtifact.m_vertexData = gPreMade.m_cubeVertexData;
+    testArtifact.m_indexBufferData = gPreMade.m_cubeIndexBufferData;
+    testArtifact.m_yPos += 3;
+
+    oxygenArtifact1.m_vertexData = gPreMade.m_cubeVertexData;
+    oxygenArtifact1.m_indexBufferData = gPreMade.m_cubeIndexBufferData;
+    oxygenArtifact1.m_yPos += 3;
+    oxygenArtifact1.m_xPos += 3;
+
+    gNuclearCore.loadFromOBJ("assets/models/NuclearCoreTest.obj");
+    gNuclearCore.m_yPos += 5;
+    gNuclearCore.m_xPos -= 5;
+
+    /*
+    gWall1.loadFromOBJ("assets/models/WallPrototypeTrust.obj");
+    gWall1.m_xPos = -13.0f;
+    gWall1.m_uRotate = 90;
+    gWall2.loadFromOBJ("assets/models/WallPrototypeTrust.obj");
+    gWall2.m_xPos = -14.0f;
+
+    gWall3.loadFromOBJ("assets/models/WallPrototypeTrust.obj");
+    gWall3.m_xPos += 5;
+    gWall4.loadFromOBJ("assets/models/WallPrototypeTrust.obj");
+    gWall4.m_xPos += 5;
+    gWall4.m_zPos += 2;
+    */
+    gFloor1.loadFromOBJ("assets/models/FloorPrototypeTrust.obj");
+    gFloor2.loadFromOBJ("assets/models/FloorPrototypeTrust.obj");
+
+    LoadRoomsIntoGame();
+
     gMesh2.loadFromOBJ("assets/models/wine.obj");
+
+    cockroachEntity1.mEntityModel = &gMesh2;
+    cockroachEntity1.mEntityHitbox = &gCockroachHitbox1;
+    cockroachEntity1.mEntityApplication = &gApp;
+    cockroachEntity1.initializeEntity();
 
     VertexSpecification(&gMesh1, 1);
     VertexSpecification(&gMesh2, 0);
+    VertexSpecification(&gCockroachHitbox1, 0);
+    //VertexSpecification(&gFloor1, 3);
+    //VertexSpecification(&gFloor2, 3);
+    //VertexSpecification(&gWall3, 3);
+    //VertexSpecification(&gWall4, 3);
+    VertexSpecification(&testArtifact, 2);
+    VertexSpecification(&oxygenArtifact1, 3);
+    VertexSpecification(&gNuclearCore, 1);
+    VertexSpecification(&l_Door1, 3);
+    VertexSpecification(&l_Door2, 0);
 
     gGameObjects.push_back(&gMesh1);
     gGameObjects.push_back(&gMesh2);
+    gGameHitboxes.push_back(&gCockroachHitbox1);
+    gGameHitboxes.push_back(&gFloor1);
+    gGameHitboxes.push_back(&gFloor2);
+    gGameHitboxes.push_back(&gWall3);
+    gGameHitboxes.push_back(&gWall4);
+    gGameHitboxes.push_back(&testArtifact);
+    gGameHitboxes.push_back(&oxygenArtifact1);
+    gGameHitboxes.push_back(&gNuclearCore);
+    gGameHitboxes.push_back(&l_Door1);
+    gGameHitboxes.push_back(&l_Door2);
+
+    gWallsAndFloors.push_back(&gFloor1);
+    gWallsAndFloors.push_back(&gFloor2);
+    gWallsAndFloors.push_back(&gWall3);
+    gWallsAndFloors.push_back(&gWall4);
+    gWallsAndFloors.push_back(&testArtifact);
+    gWallsAndFloors.push_back(&oxygenArtifact1);
+    gWallsAndFloors.push_back(&gNuclearCore);
+    gWallsAndFloors.push_back(&l_Door1);
+    gWallsAndFloors.push_back(&l_Door2);
+
+    gRoomArtifacts.push_back(&oxygenArtifact1);
+    gRoomDoors.push_back(&l_Door1);
+
+    gArtifacts.push_back(&testArtifact);
+    gArtifacts.push_back(&oxygenArtifact1);
+    gArtifacts.push_back(&gNuclearCore);
+    gArtifacts.push_back(&l_Door1);
+    gArtifacts.push_back(&l_Door2);
+
+    gGameDoors.push_back(&l_Door1);
+    gGameDoors.push_back(&l_Door2);
 
     CreateGraphicsPipeline();
 
@@ -363,3 +1164,4 @@ int main(int argc, char* args[]) {
 
     return 0;
 }
+#pragma endregion

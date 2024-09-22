@@ -6,7 +6,7 @@
 Camera::Camera()
 {
     // Assuming we are at the origin
-    mEye = glm::vec3(0.0f, 0.0f, 0.0f);
+    mEye = glm::vec3(0.0f, 7.0f, 0.0f);
 
     // Assuming we are looking out into the world
     // This is along -z because otherwise we'd be looking behind us.
@@ -46,25 +46,29 @@ void Camera::MouseLook(int mouseX, int mouseY)
 
 void Camera::MoveForward(float speed)
 {
-	//Simple -- but not yet correct L
-	//plz fix
+    //Simple -- but not yet correct L
+    //plz fix
 
-	mEye += (mViewDirection*speed);
+    mEye += (mViewDirection * speed);
 }
 
 void Camera::MoveBackward(float speed)
 {
-	mEye -= (mViewDirection * speed);
+    mEye -= (mViewDirection * speed);
 }
 
 void Camera::MoveLeft(float speed)
 {
-	glm::vec3 rightVector = glm::cross(mViewDirection, mUpVector);
-	mEye -= rightVector * speed;
+    glm::vec3 rightVector = glm::cross(mViewDirection, mUpVector);
+    mEye -= rightVector * speed;
 }
 
 void Camera::MoveRight(float speed)
 {
-	glm::vec3 rightVector = glm::cross(mViewDirection, mUpVector);
-	mEye += rightVector * speed;
+    glm::vec3 rightVector = glm::cross(mViewDirection, mUpVector);
+    mEye += rightVector * speed;
+}
+
+void Camera::Teleport(const glm::vec3& newPosition) {
+    mEye = newPosition;
 }

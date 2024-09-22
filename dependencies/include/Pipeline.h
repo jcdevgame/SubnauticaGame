@@ -32,6 +32,10 @@
 #include "ExVertexes.h"
 
 struct Application {
+    double deltaTime = 0.0;
+    double lastTime = 0.0;
+    void calculateDeltaTime();
+
     int             mScreenWidth = 1920;
     int             mScreenHeight = 1080;
     GLFWwindow* mGraphicsApplicationWindow = nullptr;

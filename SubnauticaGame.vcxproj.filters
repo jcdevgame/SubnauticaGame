@@ -28,12 +28,6 @@
     <Filter Include="Header Files\stb">
       <UniqueIdentifier>{b5754f7d-7a83-408b-b5b8-7aaa91bb7f3a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Source\gl2d">
-      <UniqueIdentifier>{0e13f383-bafc-4cd2-afd3-064b5e97d366}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\gl2d">
-      <UniqueIdentifier>{14822b4e-eb88-47de-98ae-60ebe8f3d873}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Networking">
       <UniqueIdentifier>{69554957-1626-4816-9d13-103a1a4f675c}</UniqueIdentifier>
     </Filter>
@@ -46,9 +40,6 @@
       <Filter>Source Files\Source</Filter>
     </ClCompile>
     <ClCompile Include="src\Camera.cpp">
-      <Filter>Source Files\Source</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Mesh3D.cpp">
       <Filter>Source Files\Source</Filter>
     </ClCompile>
     <ClCompile Include="src\imgui\imgui.cpp">
@@ -77,6 +68,9 @@
     </ClCompile>
     <ClCompile Include="src\server.cpp">
       <Filter>Source Files\Networking</Filter>
+    </ClCompile>
+    <ClCompile Include="src\rooms.cpp">
+      <Filter>Source Files\Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -132,6 +126,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="dependencies\include\server.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dependencies\include\rooms.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
